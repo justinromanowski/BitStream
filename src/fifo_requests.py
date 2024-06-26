@@ -7,11 +7,11 @@ from time import sleep
 class SpotifyRequests:
 	###################################################### CONSTANTS
 	# CLIENT CREDENTIALS ENCODED
-	CLIENT_ID = "90a8671600fe4fdebb0f0124d8f1fe58"
-	CLIENT_SECRET = "1e613067ace0401cbff1f65fd94176bd"
+	CLIENT_ID = " "
+	CLIENT_SECRET = " "
 
-	client_credentials = f"{CLIENT_ID}:{CLIENT_SECRET}"
-	encoded_credentials = base64.b64encode(client_credentials.encode()).decode()
+	client_credentials = " "
+	encoded_credentials = " "
 
 	# TOKEN ACCESSING/FILE READING
 	TOKEN_URL = "https://accounts.spotify.com/api/token"
@@ -30,13 +30,23 @@ class SpotifyRequests:
 
 	def calibrateTokenData(self):
 	# Opens the text files w/ token data, and updates the files w/ new data
-		with open('/home/justin/rpi-rgb-led-matrix/examples-api-use/token_data.txt') as f:
+		with open('key_data/client_data.txt') as f:
+                        client_data = json.load(f)
+
+		with open('key_data/token_data.txt') as f:
 			token_data = json.load(f)
 
-		with open('/home/justin/rpi-rgb-led-matrix/examples-api-use/refresh_token.txt') as f:
+		with open('key_data/refresh_token.txt') as f:
 			refresh_token = json.load(f)
 
 		print(f"TOKEN DATA CALIBRATED\n")
+
+		self.CLIENT_ID = client_data['CLIENT_ID']
+		self.CLIENT_SECRET = client_data['CLIENT_SECRET']
+		self.client_credentials = f"{self.CLIENT_ID}:{self.CLIENT_SECRET}"
+		self.encoded_credentials = base64.b64encode(self.client_credentials.encode()).decode()
+
+		print(self.client_credentials)
 
 		self.TOKEN_TYPE = token_data["token_type"]
 		self.ACCESS_TOKEN = token_data["access_token"]
@@ -67,7 +77,7 @@ class SpotifyRequests:
 
 			refresh_resp = requests.post(self.TOKEN_URL, params=self.REFRESH_PARAMS, headers=self.REFRESH_HEADERS)
 			if(refresh_resp.status_code==200):
-				with open('/home/justin/rpi-rgb-led-matrix/examples-api-use/token_data.txt', 'w') as f:
+				with open('key_data/token_data.txt', 'w') as f:
 					json.dump(refresh_resp.json(), f, ensure_ascii=False)
 				self.calibrateTokenData()
 			else:
@@ -126,7 +136,8 @@ class SpotifyRequests:
 		elif(curr_play_resp.status_code == 204):
 			data_tx = f"204"
 			return data_tx
-
+		else:
+			return "error"
 
 	def __init__(self):
 		self.calibrateTokenData()
@@ -322,9 +333,10 @@ while True:
 
 		data_tx = spotify_data.requestData()
 
-		data_fd.write(data_tx)
-		data_fd.flush()
-		print("Sent currently playing data")
+		if(data_tx != "error"):
+			data_fd.write(data_tx)
+			data_fd.flush()
+			print("Sent currently playing data")
 
 	if(cmd_rx == "mlb"):
 		print("Received cmd for mlb")

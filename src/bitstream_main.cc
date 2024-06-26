@@ -142,18 +142,18 @@ int main(int argc, char *argv[]) {
    return 2;
   }
 */
-/*
+
   if(pthread_create(&spotify_canvas_thr, NULL, spotifyThread, (void*)&canvas_ptrs) != 0) {
     printf("ERROR in spotify thread creation");
     return 2;
   }
-*/
 
+/*
   if(pthread_create(&baseball_canvas_thr, NULL, baseballThread, (void*)&canvas_ptrs) != 0) {
     printf("ERROR in baseball thread creation");
     return 2;
   }
-
+*/
 
   // JOIN THREADS TOGETHER
   // Join the threads to main thread -- don't execute cleanup code
@@ -173,18 +173,18 @@ int main(int argc, char *argv[]) {
     return 3;
   }
 */
-/*
+
   if(pthread_join(spotify_canvas_thr, &spotify_ret) != 0) {
     printf("ERROR in spotify thread joining");
     return 3;
   }
-*/
 
+/*
   if(pthread_join(baseball_canvas_thr, &baseball_ret) != 0) {
     printf("ERROR in baseball thread joining");
     return 3;
   }
-
+*/
   // CLEANUP AND EXIT CLEANLY
   // Program is exited, shut down the RGB Matrix
   printf("Exiting... clearing canvas\n");

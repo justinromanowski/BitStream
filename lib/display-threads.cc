@@ -1128,10 +1128,10 @@ void* baseballThread(void* ptr) {
           std::string data(token);
           switch(i){
             case 0:
-              away_runs = stoi(data);
+              away_score = data;
               break;
             case 1:
-              home_runs = stoi(data);
+              home_score = data;
               break;
           }
           token = strtok(NULL,",");
@@ -1139,6 +1139,26 @@ void* baseballThread(void* ptr) {
       }
 
       // DISPLAY
+      SetCanvasArea(offscreen_canvas, center_y, center_x, 28, 32, &blank);
+
+      int final_x = 20;
+      int final_y = 4;
+      char final[] = "FINAL";
+      rgb_matrix::DrawText(offscreen_canvas, five_seven_font, final_x, final_y + five_seven_font.baseline(),
+                           scoreboard_color, NULL, final, letter_spacing);
+
+      // -1 to give padding around logo
+      SetCanvasArea(offscreen_canvas, home_x-1, home_y-1, 18, 32, &home_main);
+      SetCanvasArea(offscreen_canvas, away_x-1, away_y-1, 18, 32, &away_main);
+
+      CopyImageToCanvasTransparent(home_logo[0], offscreen_canvas, &home_x, &home_y);
+      CopyImageToCanvasTransparent(away_logo[0], offscreen_canvas, &away_x, &away_y);
+
+      rgb_matrix::DrawText(offscreen_canvas, time_font, home_x+5, home_y+18 + time_font.baseline(),
+                           home_second, NULL, home_score.c_str(), letter_spacing);
+
+      rgb_matrix::DrawText(offscreen_canvas, time_font, away_x+5, away_y+18 + time_font.baseline(),
+                           away_second, NULL, away_score.c_str(), letter_spacing);
 
     } else if(game_state == "nogame") {
       printf("nogame");
