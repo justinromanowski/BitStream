@@ -1,0 +1,271 @@
+#include "led-matrix.h"
+#include "graphics.h"
+#include "thread.h"
+
+#include <time.h>
+#include <getopt.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <signal.h>
+#include <math.h>
+#include <exception>
+#include <Magick++.h>
+#include <magick/image.h>
+#include <pthread.h>
+
+// NAMESPACE SETUP
+// ---------------
+using rgb_matrix::Canvas;
+using rgb_matrix::RGBMatrix;
+using rgb_matrix::FrameCanvas;
+
+using ImageVector = std::vector<Magick::Image>;
+
+// Divides clock from the display
+const int screen_divider = 44;
+
+const char *img_filename = "/home/justin/rpi-rgb-led-matrix/examples-api-use/eagles_album_cover.jpeg";
+
+ImageVector images;
+
+struct canvas_args {
+  RGBMatrix *canvas;
+  FrameCanvas *offscreen_canvas;
+};
+
+
+rgb_matrix::Font seven_fourtn_font;
+rgb_matrix::Font five_seven_font;
+rgb_matrix::Font four_six_font;
+rgb_matrix::Font *outline_font = NULL;
+
+// THREAD INITIALIZATION
+// ---------------------
+pthread_t spotify_canvas_thr;
+pthread_mutex_t canvas_mutex;
+
+// FUNCTION SETUP - INTERRUPTS
+// Used to peacefully terminate the program's execution
+volatile bool interrupt_received = false;
+static void InterruptHandler(int signo) {
+  interrupt_received = true;
+}
+
+// FUNCTION SETUP - IMAGE DISPLAYING
+// ---------------------------------
+
+// Given the filename, load the image and scale to the size of the matrix.
+// // If this is an animated image, the resutlting vector will contain multiple.
+static ImageVector LoadImageAndScaleImage(const char *filename,
+                                          int target_width,
+                                          int target_height) {
+  ImageVector result;
+
+  ImageVector frames;
+  try {
+    readImages(&frames, filename);
+  } catch (std::exception &e) {
+    if (e.what())
+      fprintf(stderr, "%s\n", e.what());
+    return result;
+  }
+
+  if (frames.empty()) {
+    fprintf(stderr, "No image found.");
+    return result;
+  }
+
+  // Animated images have partial frames that need to be put together
+  if (frames.size() > 1) {
+    Magick::coalesceImages(&result, frames.begin(), frames.end());
+  } else {
+    result.push_back(frames[0]); // just a single still image.
+  }
+
+  for (Magick::Image &image : result) {
+    image.scale(Magick::Geometry(target_width, target_height));
+  }
+
+  return result;
+}
+
+// Copy an image to a Canvas. Note, the RGBMatrix is implementing the Canvas
+// interface as well as the FrameCanvas we use in the double-buffering of the
+// animted image.
+void CopyImageToCanvas(const Magick::Image &image, Canvas *canvas,
+                       const int *x_pos, const int *y_pos) {
+  //const int offset_x = x;
+  //const int offset_y = y;
+
+  // Copy all the pixels to the canvas.
+  for (size_t y = 0; y < image.rows(); ++y) {
+    for (size_t x = 0; x < image.columns(); ++x) {
+      const Magick::Color &c = image.pixelColor(x, y);
+      if (c.alphaQuantum() < 256) {
+        canvas->SetPixel(x + *x_pos, y + *y_pos,
+                         ScaleQuantumToChar(c.redQuantum()),
+                         ScaleQuantumToChar(c.greenQuantum()),
+                         ScaleQuantumToChar(c.blueQuantum()));
+      }
+    }
+  }
+  printf("Constructed image\n");
+}
+
+// An animated image has to constantly swap to the next frame.
+// We're using double-buffering and fill an offscreen buffer first, then show.
+void ShowAnimatedImage(const Magick::Image &image, RGBMatrix *canvas,
+                       const int *x_pos, const int *y_pos,
+                       FrameCanvas *offscreen_canvas) {
+      CopyImageToCanvas(image, offscreen_canvas, x_pos, y_pos);
+      offscreen_canvas = canvas->SwapOnVSync(offscreen_canvas);
+}
+
+
+
+static bool FullSaturation(const rgb_matrix::Color &c) {
+  return (c.r == 0 || c.r == 255)
+    && (c.g == 0 || c.g == 255)
+    && (c.b == 0 || c.b == 255);
+}
+
+int main(int argc, char *argv[]) {
+
+  RGBMatrix::Options matrix_options;
+  matrix_options.hardware_mapping = "regular";
+  matrix_options.rows = 64;
+  matrix_options.cols = 64;
+  matrix_options.chain_length = 1;
+  matrix_options.parallel = 1;
+  matrix_options.show_refresh_rate = false;
+
+  // INITIALIZE IMAGE
+  Magick::InitializeMagick(*argv);
+
+
+  RGBMatrix *canvas = RGBMatrix::CreateFromFlags(&argc, &argv, &matrix_options);
+  if (canvas == NULL)
+    return 1;
+
+  FrameCanvas *offscreen_canvas = canvas->CreateFrameCanvas();
+
+  struct canvas_args canvas_ptrs;
+  canvas_ptrs.canvas = canvas;
+  canvas_ptrs.offscreen_canvas = offscreen_canvas;
+
+  // INITIALIZE INTERRUPTS
+  signal(SIGTERM, InterruptHandler);
+  signal(SIGINT, InterruptHandler);
+
+
+  images = LoadImageAndScaleImage(img_filename,
+                                  64,
+                                  screen_divider);
+
+// SET ALL PIXELS OFF TO START
+  canvas->Clear();
+
+  // Configure colors for text
+//  rgb_matrix::Color color(180, 90, 0); //text color
+//  rgb_matrix::Color bg_color(0, 0, 0);
+//  rgb_matrix::Color flood_color(0, 0, 0);
+//  rgb_matrix::Color outline_color(0,0,0);
+
+  bool with_outline = false;
+
+  const bool all_extreme_colors = (matrix_options.brightness == 100)
+    && FullSaturation(color)
+    && FullSaturation(bg_color)
+    && FullSaturation(outline_color);
+  if (all_extreme_colors)
+    canvas->SetPWMBits(1);
+
+    // INITIALIZE FONTS
+
+  const char *time_font_ptr = NULL;
+  const char *date_font_ptr = NULL;
+  int letter_spacing = 0;
+
+  // Get font types
+  char sev_fourtn_font_fp[] = "/home/justin/rpi-rgb-led-matrix/fonts/7x14B.bdf";
+  seven_fourtn_font_ptr = strdup(sev_fourtn_font_fp);
+  if (seven_fourtn_font_ptr == NULL) {
+    fprintf(stderr, "Need to specify BDF font-file with -f\n");
+    //return 1;
+  }
+  char four_six_font_fp[] = "/home/justin/rpi-rgb-led-matrix/fonts/4x6.bdf";
+  four_six_ptr = strdup(four_six_font_fp);
+  if (four_six_ptr == NULL) {
+    fprintf(stderr, "Need to specify BDF font-file with -f\n");
+    //return 1;
+  }
+
+  char five_seven_font_fp[] = "/home/justin/rpi-rgb-led-matrix/fonts/5x7.bdf";"
+  five_seven_ptr = strdup(five_seven_font_fp);
+  if (five_seven_ptr == NULL) {
+    fprintf(stderr, "Need to specify BDF font-file with -f\n");
+    //return 1;
+  }
+
+  // Load font. This needs to be a filename with a bdf bitmap font.
+  if (!seven_fourtn_font.LoadFont(seven_fourtn_ptr)) {
+    fprintf(stderr, "Couldn't load font '%s'\n", seven_fourtn_ptr);
+    //return 1;
+  } else {
+}
+  if (!four_six_font.LoadFont(four_six_ptr)) {
+    fprintf(stderr, "Couldn't load font '%s'\n", four_six_ptr);
+    //return 1;
+  }
+
+  if (!five_seven_font.LoadFont(five_seven_ptr)) {
+    fprintf(stderr, "Couldn't load font '%s'\n", five_seven_ptr);
+    //return 1;
+  }
+
+
+if (with_outline) {
+    outline_font = time_font.CreateOutlineFont();
+  }
+
+  if (pthread_mutex_init(&canvas_mutex, NULL) != 0) {
+        printf("Mutex INIT failed\n");
+        return 1;
+  }
+
+  if(pthread_create(&clock_canvas_thr, NULL, clockThread, (void*)&canvas_ptrs) != 0) {
+    printf("ERROR in clock thread creation");
+    return 2;
+  }
+
+  if(pthread_create(&image_canvas_thr, NULL, imageThread, (void*)&canvas_ptrs) != 0) {
+    printf("ERROR in image thread creation");
+   return 2;
+  }
+
+//  clockThread(canvas, &matrix_options);
+//  imageThread(canvas);
+
+  // Join the threads to main thread -- don't execute cleanup code
+  // until interrupt is received
+  void *canvas_ret;
+  void *image_ret;
+
+  if(pthread_join(clock_canvas_thr, &canvas_ret) != 0) {
+    printf("ERROR in clock thread joining");
+    return 3;
+  }
+
+  if(pthread_join(image_canvas_thr, &image_ret) != 0) {
+    printf("ERROR in image thread joining");
+    return 3;
+  }
+
+  // Program is exited, shut down the RGB Matrix
+  printf("Exiting... clearing canvas\n");
+  canvas->Clear();
+  delete canvas;
+
+}
