@@ -46,8 +46,6 @@ class SpotifyRequests:
 		self.client_credentials = f"{self.CLIENT_ID}:{self.CLIENT_SECRET}"
 		self.encoded_credentials = base64.b64encode(self.client_credentials.encode()).decode()
 
-		print(self.client_credentials)
-
 		self.TOKEN_TYPE = token_data["token_type"]
 		self.ACCESS_TOKEN = token_data["access_token"]
 		self.REFRESH_TOKEN = refresh_token["refresh_token"]
