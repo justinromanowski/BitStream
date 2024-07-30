@@ -1,3 +1,11 @@
+/////////////////////////////////////////////////////////////////////////////
+// TODO:
+// - Make classes for each thread, with thread functions embedded within classes
+// - Add more apps (eventually), focus on integrating hardware & PCB
+// - Fix issue w/ baseball base transparency issue & inning number overlap
+/////////////////////////////////////////////////////////////////////////////
+
+
 #include "display-threads.h"
 
 // NAMESPACE SETUP -----------------------------------------------------------
@@ -107,7 +115,7 @@ void CopyImageToCanvasTransparent(const Magick::Image &image, Canvas *canvas,
   for (size_t y = 0; y < image.rows(); ++y) {
     for (size_t x = 0; x < image.columns(); ++x) {
       const Magick::Color &c = image.pixelColor(x, y);
-      if (c.redQuantum()>0 && c.greenQuantum()>0 && c.blueQuantum()>0) { // 256
+      if (c.redQuantum()>0 || c.greenQuantum()>0 || c.blueQuantum()>0) { // 256
         canvas->SetPixel(x + *x_pos, y + *y_pos,
                          ScaleQuantumToChar(c.redQuantum()),
                          ScaleQuantumToChar(c.greenQuantum()),
@@ -442,6 +450,16 @@ void* spotifyThread(void *ptr){
 
     printf("SPOTIFY AT MUTEX\n");
 
+
+    //////////////////////////////////////////////////////////// TEST
+    using std::chrono::high_resolution_clock;
+    using std::chrono::duration_cast;
+    using std::chrono::duration;
+    using std::chrono::milliseconds;
+
+auto t3 = high_resolution_clock::now();
+//////////////////////////////////////////////////////////////////
+
     if((int)usleep_count > cmd_refresh) {
 
       // OPEN THE FIFOS
@@ -626,6 +644,27 @@ void* spotifyThread(void *ptr){
 
     SetCanvasArea(offscreen_canvas, artist_x_orig-2, artist_y_orig, 2, 6, &bg_color);
 
+/////////////////////////////////////////// TESTING
+    auto t1 = high_resolution_clock::now();
+
+    if(status_code == 200) {
+      // Album cover and spotify logo
+      CopyImageToCanvas(album_cover[0], offscreen_canvas, &album_cover_x, &album_cover_y);
+    } else {
+      CopyImageToCanvas(spotify_default[0], offscreen_canvas, &album_cover_x, &album_cover_y);
+    }
+
+    auto t2 = high_resolution_clock::now();
+
+    /* Getting number of milliseconds as an integer. */
+    auto ms_int = duration_cast<milliseconds>(t2 - t1);
+
+    /* Getting number of milliseconds as a double. */
+    duration<double, std::milli> ms_double = t2 - t1;
+
+    printf("%f ms\n", ms_double.count());
+
+/*
     if(status_code == 200) {
       // Album cover and spotify logo
       CopyImageToCanvas(album_cover[0], offscreen_canvas, &album_cover_x, &album_cover_y);
@@ -634,6 +673,9 @@ void* spotifyThread(void *ptr){
     }
 
     CopyImageToCanvas(spotify_logo[0], offscreen_canvas, &spotify_logo_x, &spotify_logo_y);
+*/
+////////////////////////////////////////////////////////
+
 
     // Scrolls text across screen
 
@@ -647,8 +689,20 @@ void* spotifyThread(void *ptr){
       artist_count = 0;
     }
 
+////////////////////////////////////////////////////////////////// TESTING
+    auto t4 = high_resolution_clock::now();
+    /* Getting number of milliseconds as an integer. */
+    auto ms_int2 = duration_cast<milliseconds>(t4 - t3);
+
+    /* Getting number of milliseconds as a double. */
+    duration<double, std::milli> ms_double2 = t4 - t3;
+
+    printf("%f ms\n", ms_double2.count());
+//////////////////////////////////////////////////////////////////////////
+
 
     canvas->SwapOnVSync(offscreen_canvas);
+    //offscreen_canvas = canvas->SwapOnVSync(offscreen_canvas);
     pthread_mutex_unlock(&canvas_mutex);
 
     usleep(200*1000);
@@ -680,7 +734,7 @@ void* baseballThread(void* ptr) {
   const char *strike_circle_fn = "/home/justin/rpi-rgb-led-matrix/examples-api-use/strike_circle.png";
   const char *out_circle_fn = "/home/justin/rpi-rgb-led-matrix/examples-api-use/out_circle.png";
 
-
+  // THREAD INITIALIZATION
   struct canvas_args *canvas_ptrs = (struct canvas_args*)ptr;
   RGBMatrix *canvas = canvas_ptrs->canvas;
   FrameCanvas *offscreen_canvas = canvas_ptrs->offscreen_canvas;
@@ -689,6 +743,9 @@ void* baseballThread(void* ptr) {
   Magick::InitializeMagick(NULL);
 
   int letter_spacing = 0;
+
+  // FILEPATHS
+  std::string baseball_path = "images/baseball/";
 
   // GAME INFO
   const int base_size = 9;
@@ -815,6 +872,7 @@ void* baseballThread(void* ptr) {
   int home_runs;
 
   int innings;
+  std::string top_bot;
 
   // FIFO DATA
   char cmd_tx[64] = "mlb";
@@ -916,8 +974,8 @@ void* baseballThread(void* ptr) {
       // If the teams have changed, then update the file paths
       // and update the logos
 
-      home_logo_fn = mlb_fn + home_abrv + ".png";
-      away_logo_fn = mlb_fn + away_abrv + ".png";
+      home_logo_fn = baseball_path + home_abrv + ".png";
+      away_logo_fn = baseball_path + away_abrv + ".png";
 
       const char *home_fn = home_logo_fn.c_str();
       const char *away_fn = away_logo_fn.c_str();
@@ -978,10 +1036,10 @@ void* baseballThread(void* ptr) {
       // -1 to give padding around logo
       SetCanvasArea(offscreen_canvas, home_x-1, home_y-1, 18, 32, &home_main);
       SetCanvasArea(offscreen_canvas, away_x-1, away_y-1, 18, 32, &away_main);
-//printf("TRYING TO PRINT IMAGES\n");
+
       CopyImageToCanvasTransparent(home_logo[0], offscreen_canvas, &home_x, &home_y);
       CopyImageToCanvasTransparent(away_logo[0], offscreen_canvas, &away_x, &away_y);
-//printf("PRINTED IMAGS\n");
+
       rgb_matrix::DrawText(offscreen_canvas, time_font, home_x+5, home_y+18 + time_font.baseline(),
                            home_second, NULL, home_score.c_str(), letter_spacing);
 
@@ -994,7 +1052,7 @@ void* baseballThread(void* ptr) {
       // away_runs, home_runs, inning
 
       // PARSING
-      for(int i=0; i<9; i++) {
+      for(int i=0; i<10; i++) {
         if(token!=NULL) {
           std::string data(token);
           switch(i){
@@ -1025,9 +1083,12 @@ void* baseballThread(void* ptr) {
             case 8:
               inning = data;
               break;
+            case 9:
+              top_bot = data;
+              break;
           }
           token = strtok(NULL,",");
-        } else i=9;
+        } else i=10;
       }
 
       // DISPLAY
@@ -1064,8 +1125,16 @@ void* baseballThread(void* ptr) {
       }
 
       // INNINGS
-      CopyImageToCanvasTransparent(top_inning[0], offscreen_canvas, &inning_x, &top_inning_y);
-      CopyImageToCanvasTransparent(bot_inning[0], offscreen_canvas, &inning_x, &bot_inning_y);
+      if(top_bot=="T"){
+        CopyImageToCanvasTransparent(top_inning[0], offscreen_canvas, &inning_x, &top_inning_y);
+        SetCanvasArea(offscreen_canvas, inning_x, bot_inning_y, 5, 3, &blank);
+      } else if(top_bot=="B"){
+        SetCanvasArea(offscreen_canvas, inning_x, top_inning_y, 5, 3, &blank);
+        CopyImageToCanvasTransparent(bot_inning[0], offscreen_canvas, &inning_x, &bot_inning_y);
+      } else {
+        SetCanvasArea(offscreen_canvas, inning_x, top_inning_y, 5, 3, &blank);
+        SetCanvasArea(offscreen_canvas, inning_x, bot_inning_y, 5, 3, &blank);
+      }
 
       rgb_matrix::DrawText(offscreen_canvas, six_ten_font, inning_x, top_inning_y+6 + date_font.baseline(),
                            scoreboard_color, NULL, inning.c_str(), letter_spacing);
@@ -1164,56 +1233,130 @@ void* baseballThread(void* ptr) {
       printf("nogame");
     }
 
-/*
-    // -1 to give padding around logo
-    SetCanvasArea(offscreen_canvas, home_x-1, home_y-1, 18, 32, &home_main);
-    SetCanvasArea(offscreen_canvas, away_x-1, away_y-1, 18, 32, &away_main);
-
-    CopyImageToCanvasTransparent(home_logo[0], offscreen_canvas, &home_x, &home_y);
-    CopyImageToCanvasTransparent(away_logo[0], offscreen_canvas, &away_x, &away_y);
-
-    rgb_matrix::DrawText(offscreen_canvas, time_font, home_x+1, home_y+24 + date_font.baseline(),
-                         home_second, NULL, home_score.c_str(), letter_spacing);
-
-    rgb_matrix::DrawText(offscreen_canvas, time_font, away_x+5, away_y+24 + date_font.baseline(),
-                         away_second, NULL, away_score.c_str(), letter_spacing);
-
-    // Middle scoreboard
-    CopyImageToCanvasTransparent(full_base[0], offscreen_canvas, &first_base_x, &first_base_y);
-    CopyImageToCanvasTransparent(empty_base[0], offscreen_canvas, &second_base_x, &second_base_y);
-    CopyImageToCanvasTransparent(full_base[0], offscreen_canvas, &third_base_x, &third_base_y);
-
-    CopyImageToCanvasTransparent(top_inning[0], offscreen_canvas, &inning_x, &top_inning_y);
-    CopyImageToCanvasTransparent(bot_inning[0], offscreen_canvas, &inning_x, &bot_inning_y);
-
-    rgb_matrix::DrawText(offscreen_canvas, six_ten_font, inning_x, top_inning_y+6 + date_font.baseline(),
-                         scoreboard_color, NULL, inning.c_str(), letter_spacing);
-
-    // BALL
-    rgb_matrix::DrawText(offscreen_canvas, date_font, circles_text_x, ball_y + date_font.baseline(),
-                         scoreboard_color, NULL, b, letter_spacing);
-
-    CopyImageToCanvasTransparent(ball_circle[0], offscreen_canvas, &first_cir_x, &ball_y);
-    CopyImageToCanvasTransparent(ball_circle[0], offscreen_canvas, &second_cir_x, &ball_y);
-    CopyImageToCanvasTransparent(empty_circle[0], offscreen_canvas, &third_cir_x, &ball_y);
-
-    // STRIKE
-    rgb_matrix::DrawText(offscreen_canvas, date_font, circles_text_x, strike_y + date_font.baseline(),
-                         scoreboard_color, NULL, s, letter_spacing);
-
-    CopyImageToCanvasTransparent(strike_circle[0], offscreen_canvas, &first_cir_x, &strike_y);
-    CopyImageToCanvasTransparent(empty_circle[0], offscreen_canvas, &second_cir_x, &strike_y);
-
-    // OUT
-    rgb_matrix::DrawText(offscreen_canvas, date_font, circles_text_x, out_y + date_font.baseline(),
-                         scoreboard_color, NULL, o, letter_spacing);
-
-    CopyImageToCanvasTransparent(out_circle[0], offscreen_canvas, &first_cir_x, &out_y);
-    CopyImageToCanvasTransparent(out_circle[0], offscreen_canvas, &second_cir_x, &out_y);
-*/
     canvas->SwapOnVSync(offscreen_canvas);
     pthread_mutex_unlock(&canvas_mutex);
     usleep(10*1000*1000); // sleep 10s
   }
   printf("Exited baseball thread\n");
+}
+
+void* weatherThread(void *ptr){
+  // THREAD INITIALIZATIONS
+  struct canvas_args *canvas_ptrs = (struct canvas_args*)ptr;
+  RGBMatrix *canvas = canvas_ptrs->canvas;
+  FrameCanvas *offscreen_canvas = canvas_ptrs->offscreen_canvas;
+  pthread_mutex_t canvas_mutex = canvas_ptrs->canvas_mutex;
+
+  Magick::InitializeMagick(NULL);
+  int letter_spacing = 0;
+
+  // COLORS ////////////////////////////////////////
+  rgb_matrix::Color weather_text_color(10, 10, 10);
+
+  // FILEPATHS /////////////////////////////////////
+  std::string weather_img_path = "images/weather/";
+  std::string raindrop_img_fn = weather_img_path + "raindrop.png";
+
+  // WEATHER DATA VARIABLES ///////////////////////
+  ImageVector bg_img;
+  ImageVector curr_img;
+  ImageVector one_hr_img;
+  ImageVector raindrop_img;
+
+  raindrop_img  = LoadImageAndScaleImage(raindrop_img_fn.c_str(),
+                                         5, 8);
+
+  std::string city_name = "Naples, FL";
+
+  std::string curr_temp = "97°";
+  std::string curr_precip = "54%";
+  std::string curr_time = "3pm";
+  std::string curr_img_number = "1";
+
+  std::string one_hr_temp = "95°";
+  std::string one_hr_time = "4pm";
+  std::string one_hr_img_number = "12";
+
+  // SIZES AND LOCATIONS
+  int bg_img_size_x = 64;
+  int bg_img_size_y = 30;
+  int bg_img_x = 0;
+  int bg_img_y = 0;
+  int curr_img_size = 20;
+  int curr_img_x = 0;
+  int curr_img_y = 0;
+  int small_img_size = 14;
+  int one_hr_img_x = 3;
+  int one_hr_img_y = 25;
+
+ // int precip_x = 64 - (5 * curr_precip.size());
+  int precip_y = curr_img_y + 14;
+//  int raindrop_x = precip_x - 6;
+
+  int curr_text_x = 5;
+  int curr_temp_y = 0;
+  int city_y = precip_y + 8;
+
+
+  // FIFO DATA ///////////////////////////////////////
+  char cmd_tx[64] = "weather";
+  char data_rx[1024];
+
+
+  // FIFO READING ////////////////////////////////////
+  cmd_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/cmd_cc_to_py",O_WRONLY|O_NONBLOCK);
+  printf("Cmd fifo opened on C++\n");
+  data_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/data_py_to_cc",O_RDONLY|O_NONBLOCK);
+  printf("Data fifo opened on C++\n");
+
+  printf("C++ sending command for weather data\n");
+  write(cmd_fd, cmd_tx, sizeof(cmd_tx));
+
+  printf("Reading from data fifo\n");
+
+  usleep(500*1000); // 50ms
+  read(data_fd, data_rx, 1024);
+  printf("Received %s", data_rx);
+
+  while(!interrupt_received){
+    printf("WEAHTER AT MUTEX\n");
+
+    std::string bg_img_fn = weather_img_path + "background-" + curr_img_number + ".png";
+    bg_img = LoadImageAndScaleImage(bg_img_fn.c_str(),
+                                      bg_img_size_x,
+                                      bg_img_size_y);
+
+    std::string curr_img_fn = weather_img_path + "weather-" + curr_img_number + ".png";
+    curr_img = LoadImageAndScaleImage(curr_img_fn.c_str(),
+                                      curr_img_size,
+                                      curr_img_size);
+
+    std::string one_hr_img_fn = weather_img_path + "weather-" + one_hr_img_number + ".png";
+    one_hr_img = LoadImageAndScaleImage(one_hr_img_fn.c_str(),
+                                        small_img_size,
+                                        small_img_size);
+
+    pthread_mutex_lock(&canvas_mutex);
+
+    // DISPLAYING WEATHER IMAGES
+      CopyImageToCanvas(bg_img[0], offscreen_canvas, &bg_img_x, &bg_img_y);
+//    CopyImageToCanvas(curr_img[0], offscreen_canvas, &curr_img_x, &curr_img_y);
+//    CopyImageToCanvas(raindrop_img[0], offscreen_canvas, &raindrop_x, &precip_y);
+//    CopyImageToCanvas(one_hr_img[0], offscreen_canvas, &one_hr_img_x, &one_hr_img_y);
+
+
+    rgb_matrix::DrawText(offscreen_canvas, time_font, curr_text_x, curr_temp_y + time_font.baseline(),
+                         weather_text_color, NULL, curr_temp.c_str(), letter_spacing);
+
+    rgb_matrix::DrawText(offscreen_canvas, five_seven_font, curr_text_x, city_y + five_seven_font.baseline(),
+                         weather_text_color, NULL, city_name.c_str(), letter_spacing);
+
+    rgb_matrix::DrawText(offscreen_canvas, five_seven_font, curr_text_x, precip_y + five_seven_font.baseline(),
+                         weather_text_color, NULL, curr_precip.c_str(), letter_spacing);
+
+    canvas->SwapOnVSync(offscreen_canvas);
+    pthread_mutex_unlock(&canvas_mutex);
+    usleep(10*1000*1000);
+  }
+
 }

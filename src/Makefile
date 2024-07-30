@@ -10,7 +10,7 @@ RGB_INCDIR=$(RGB_LIB_DISTRIBUTION)/include
 RGB_LIBDIR=$(RGB_LIB_DISTRIBUTION)/lib
 RGB_LIBRARY_NAME=rgbmatrix
 RGB_LIBRARY=$(RGB_LIBDIR)/lib$(RGB_LIBRARY_NAME).a
-LDFLAGS+=-L$(RGB_LIBDIR) -l$(RGB_LIBRARY_NAME) -lrt -lm -lpthread
+LDFLAGS+=-L$(RGB_LIBDIR) -l$(RGB_LIBRARY_NAME) -lrt -lm -lpthread -lwiringPi -lwiringPiDev
 
 # To compile image-example
 MAGICK_CXXFLAGS?=$(shell GraphicsMagick++-config --cppflags --cxxflags)
@@ -26,7 +26,7 @@ bitstream_main.o : bitstream_main.cc
 
 bitstream_main: bitstream_main.o $(RGB_LIBRARY)
 	$(CXX) $< -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
-
+#	$(CXX) $^ -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
 clean:
 	rm -f $(OBJECTS) $(BINARIES)
 

@@ -6,7 +6,7 @@
 OBJECTS=gpio.o led-matrix.o options-initialize.o framebuffer.o display-threads.o\
         thread.o bdf-font.o graphics.o led-matrix-c.o hardware-mapping.o \
         pixel-mapper.o multiplex-mappers.o \
-	content-streamer.o
+	content-streamer.o canvas_gpio.o
 
 TARGET=librgbmatrix
 
@@ -184,6 +184,7 @@ $(TARGET).a : $(OBJECTS)
 $(TARGET).so.1 : $(OBJECTS)
 	$(CXX) -shared -Wl,-soname,$@ -o $@ $^ -lpthread  -lrt -lm -lpthread
 
+
 led-matrix.o: led-matrix.cc $(INCDIR)/led-matrix.h
 thread.o : thread.cc $(INCDIR)/thread.h
 framebuffer.o: framebuffer.cc framebuffer-internal.h
@@ -199,6 +200,13 @@ display-threads.o : display-threads.cc
 	$(CXX) -I$(INCDIR) $(CXXFLAGS_M) $(MAGICK_CXXFLAGS) -c -o $@ $<
 
 librgbmatrix: display-threads.o #$(RGB_LIBRARY)
+	$(CXX) $< -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
+
+# for canvas gpio
+canvas_gpio.o : canvas_gpio.cc
+	$(CXX) -I$(INCDIR) $(CXXFLAGS_M) $(MAGICK_CXXFLAGS) -c -o $@ $<
+
+librgbmatrix: canvas_gpio.o #$(RGB_LIBRARY)
 	$(CXX) $< -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
 
 clean:

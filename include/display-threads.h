@@ -1,3 +1,6 @@
+#ifndef DISPLAY_THREADS_H
+#define DISPLAY_THREADS_H
+
 #include "led-matrix.h"
 #include "graphics.h"
 #include "thread.h"
@@ -20,6 +23,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <chrono>
+
 using rgb_matrix::Canvas;
 using rgb_matrix::RGBMatrix;
 using rgb_matrix::FrameCanvas;
@@ -39,3 +44,7 @@ void* imageThread(void *ptr);
 void* spotifyThread(void *ptr);
 
 void* baseballThread(void *ptr);
+
+void* weatherThread(void *ptr);
+
+#endif

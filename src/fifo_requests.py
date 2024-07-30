@@ -199,11 +199,13 @@ class MLBRequests:
 		home_runs = yankee_game['competitions'][0]['competitors'][0]['score']
 
 		inning = yankee_game['status']['period']
+		top_bot = yankee_game['status']['type']['shortDetail']
+		top_bot = top_bot[0]
 
 		# Prep to transmit
 		in_str = "in"
 		in_str = self.appendTeamData(yankee_game, in_str)
-		in_str = in_str + f",{balls},{strikes},{outs},{on_first},{on_second},{on_third},{away_runs},{home_runs},{inning},"
+		in_str = in_str + f",{balls},{strikes},{outs},{on_first},{on_second},{on_third},{away_runs},{home_runs},{inning},{top_bot},"
 
 		return in_str
 
@@ -302,6 +304,107 @@ class MLBRequests:
 		print("MLB class initialized")
 
 
+class WeatherRequests:
+	######################################################
+	## WEATHER DATA FORMATTING
+	## TEMP_0, IMG_NUM_0, PRECIP_PCT_0, TIME_0, ... , TIME_3, CITY_NAME, STATE_NAME,
+	##
+	## Note: Temp, img number, etc. are repeated four times in the data, first is the
+	## current forecast, second is 1h forecast, third is 2h, and fourth is 3h.
+	##
+	###################################################### CONSTANTS
+	API_KEY = " "
+	LOCATION_KEY = " "
+
+	POSTAL_CODE = "34113"
+	CITY_NAME = " "
+	STATE_NAME = " "
+
+	LOCATION_URL = "http://dataservice.accuweather.com/locations/v1/postalcodes/search"
+	FORECASE_URL = " "
+	FORECAST_BASE = "http://dataservice.accuweather.com/forecasts/v1/hourly/12hour/"
+
+	LOCATION_PARAMS = " "
+	FORECAST_PARAMS = " "
+
+	###################################################### FUNCTIONS
+
+	def requestData(self):
+
+		# Initialize variables for weather data
+		temp = -1
+		icon_number = -1
+		precip_perc = -1
+		time = -1
+
+		weather_str = ""
+
+		# Send GET request
+		self.FORECAST_PARAMS = {
+			"apikey" : self.API_KEY
+			}
+		weather_resp = requests.get(self.FORECAST_URL, params=self.FORECAST_PARAMS)
+
+		if(weather_resp.status_code==200):
+			weather_data = weather_resp.json()
+
+			for i in range(0,4):
+				temp = weather_data[i]['Temperature']['Value']
+				icon_number = weather_data[i]['WeatherIcon']
+				precip_perc = weather_data[i]['PrecipitationProbability']
+
+				# Parse datetime to get AM/PM time
+				datetime = weather_data[i]['DateTime']
+				time = datetime[11:13]
+
+				# Append onto weather_str to send over FIFO
+				weather_str = weather_str + f"{temp},{icon_number},{precip_perc},{time},"
+
+			# Append location
+			weather_str = weather_str + f"{self.CITY_NAME},{self.STATE_NAME},"
+		else:
+			weather_str = "ERROR"
+
+		return weather_str
+
+
+	def requestLocationKey(self):
+	# Fetches the custom AccuWeather location key for the postal code
+		self.LOCATION_PARAMS = {
+			"apikey" : self.API_KEY,
+			"q" : self.POSTAL_CODE
+			}
+
+		location_resp = requests.get(self.LOCATION_URL, params=self.LOCATION_PARAMS)
+		print(location_resp.status_code)
+
+		if(location_resp.status_code==200):
+			location_data = location_resp.json()
+
+			location_data = location_data[0]
+			self.LOCATION_KEY = location_data['Key']
+			print(self.LOCATION_KEY)
+
+			self.CITY_NAME = location_data['EnglishName']
+			self.STATE_NAME = location_data['AdministrativeArea']['ID']
+
+			self.FORECAST_URL = self.FORECAST_BASE + self.LOCATION_KEY
+
+		else:
+			printf("ERROR: Error obtaining location")
+
+
+	def __init__(self):
+		# Load the API key
+		with open('key_data/weather_token.txt') as f:
+			api_key = json.load(f)
+
+		self.API_KEY = api_key['api_key']
+		print(f"api key: {api_key}")
+
+		self.requestLocationKey()
+
+
 ################################################################### MAIN LOOP
 # All the main loop does is open the FIFO, read the command, send
 # the appropriate request, parse and format the data, and write
@@ -309,6 +412,7 @@ class MLBRequests:
 
 spotify_data = SpotifyRequests()
 mlb_data = MLBRequests()
+weather_data = WeatherRequests()
 
 # Open fifos
 cmd_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/cmd_cc_to_py", "r")
@@ -336,7 +440,7 @@ while True:
 			data_fd.flush()
 			print("Sent currently playing data")
 
-	if(cmd_rx == "mlb"):
+	elif(cmd_rx == "mlb"):
 		print("Received cmd for mlb")
 
 		data_tx = mlb_data.requestData()
@@ -344,5 +448,9 @@ while True:
 		data_fd.write(data_tx)
 		data_fd.flush()
 		print("Sent mlb data")
+
+	elif(cmd_rx == "weather"):
+		print("Received cmd for weather")
+
 
 	sleep(0.5)
