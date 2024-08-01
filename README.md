@@ -1,2 +1,2 @@
 # bitstream
-Repo for my personal project BitStream
+Go to the branch "master"
