@@ -303,18 +303,18 @@ int main(int argc, char *argv[]) {
     return 2;
   }
 */
-
+/*
   if(pthread_create(&baseball_canvas_thr, NULL, baseballThread, (void*)&canvas_ptrs) != 0) {
     printf("ERROR in baseball thread creation");
     return 2;
   }
+*/
 
-/*
   if(pthread_create(&weather_canvas_thr, NULL, weatherThread, (void*)&canvas_ptrs) != 0) {
     printf("ERROR in weather thread creation");
     return 2;
   }
-*/
+
   // JOIN THREADS TOGETHER
   // Join the threads to main thread -- don't execute cleanup code
   // until interrupt is received
@@ -340,18 +340,18 @@ int main(int argc, char *argv[]) {
     return 3;
   }
 */
-
+/*
   if(pthread_join(baseball_canvas_thr, &baseball_ret) != 0) {
     printf("ERROR in baseball thread joining");
     return 3;
   }
+*/
 
-/*
   if(pthread_join(weather_canvas_thr, &weather_ret) != 0) {
     printf("ERROR in weather thread joining");
     return 3;
   }
-*/
+
   // CLEANUP AND EXIT CLEANLY
   // Program is exited, shut down the RGB Matrix
   printf("Exiting... clearing canvas\n");

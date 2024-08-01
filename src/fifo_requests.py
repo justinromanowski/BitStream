@@ -307,7 +307,7 @@ class MLBRequests:
 class WeatherRequests:
 	######################################################
 	## WEATHER DATA FORMATTING
-	## TEMP_0, IMG_NUM_0, PRECIP_PCT_0, TIME_0, ... , TIME_3, CITY_NAME, STATE_NAME,
+	## STATUS, TEMP_0, IMG_NUM_0, PRECIP_PCT_0, TIME_0, ... , TIME_3, CITY_NAME, STATE_NAME,
 	##
 	## Note: Temp, img number, etc. are repeated four times in the data, first is the
 	## current forecast, second is 1h forecast, third is 2h, and fourth is 3h.
@@ -346,10 +346,12 @@ class WeatherRequests:
 		weather_resp = requests.get(self.FORECAST_URL, params=self.FORECAST_PARAMS)
 
 		if(weather_resp.status_code==200):
+			weather_str = weather_str + "GOOD,"
+
 			weather_data = weather_resp.json()
 
 			for i in range(0,4):
-				temp = weather_data[i]['Temperature']['Value']
+				temp = int(weather_data[i]['Temperature']['Value'])
 				icon_number = weather_data[i]['WeatherIcon']
 				precip_perc = weather_data[i]['PrecipitationProbability']
 
@@ -358,7 +360,7 @@ class WeatherRequests:
 				time = datetime[11:13]
 
 				# Append onto weather_str to send over FIFO
-				weather_str = weather_str + f"{temp},{icon_number},{precip_perc},{time},"
+				weather_str = weather_str + f"{temp}°,{icon_number},{precip_perc}%,{time},"
 
 			# Append location
 			weather_str = weather_str + f"{self.CITY_NAME},{self.STATE_NAME},"
@@ -452,5 +454,9 @@ while True:
 	elif(cmd_rx == "weather"):
 		print("Received cmd for weather")
 
+		data_tx = weather_data.requestData()
+		data_fd.write(data_tx)
+		data_fd.flush()
+		print("Sent data weather")
 
 	sleep(0.5)

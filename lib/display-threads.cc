@@ -780,6 +780,10 @@ void* baseballThread(void* ptr) {
   const int logo_size = 16;
   const int center_x = 19;
   const int center_y = 0;
+  const int nogame_logo_x = 4;
+  const int nogame_logo_y = 4;
+  const int nogame_text_x = 32;
+  const int nogame_text_y = 3;
 
   // IMAGES
 
@@ -1230,7 +1234,23 @@ void* baseballThread(void* ptr) {
                            away_second, NULL, away_score.c_str(), letter_spacing);
 
     } else if(game_state == "nogame") {
-      printf("nogame");
+      home_logo_fn = baseball_path + "NYY.png";
+      home_logo = LoadImageAndScaleImage(home_logo_fn.c_str(),
+                                         24,24);
+
+      std::string nogame_text_1 = "NO";
+      std::string nogame_text_2 = "GAME";
+      std::string nogame_text_3 = "TODAY";
+
+      CopyImageToCanvas(home_logo[0], offscreen_canvas, &nogame_logo_x, &nogame_logo_y);
+
+      rgb_matrix::DrawText(offscreen_canvas, six_ten_font, nogame_text_x, nogame_text_y + six_ten_font.baseline(),
+                           scoreboard_color, NULL, nogame_text_1.c_str(), letter_spacing);
+      rgb_matrix::DrawText(offscreen_canvas, six_ten_font, nogame_text_x, (nogame_text_y + 10) + six_ten_font.baseline(),
+                           scoreboard_color, NULL, nogame_text_2.c_str(), letter_spacing);
+      rgb_matrix::DrawText(offscreen_canvas, six_ten_font, nogame_text_x, (nogame_text_y + 20) + six_ten_font.baseline(),
+                           scoreboard_color, NULL, nogame_text_3.c_str(), letter_spacing);
+
     }
 
     canvas->SwapOnVSync(offscreen_canvas);
@@ -1266,16 +1286,29 @@ void* weatherThread(void *ptr){
   raindrop_img  = LoadImageAndScaleImage(raindrop_img_fn.c_str(),
                                          5, 8);
 
-  std::string city_name = "Naples, FL";
+  std::string status;
+  std::string city_name = "Naples";
+  std::string state_name = "FL";
 
   std::string curr_temp = "97°";
+  std::string curr_img_number = "1";
   std::string curr_precip = "54%";
   std::string curr_time = "3pm";
-  std::string curr_img_number = "1";
 
   std::string one_hr_temp = "95°";
-  std::string one_hr_time = "4pm";
   std::string one_hr_img_number = "12";
+  std::string one_hr_precip = "42%";
+  std::string one_hr_time = "4pm";
+
+  std::string two_hr_temp = "92°";
+  std::string two_hr_img_number = "14";
+  std::string two_hr_precip = "31%";
+  std::string two_hr_time = "5pm";
+
+  std::string three_hr_temp = "95°";
+  std::string three_hr_img_number = "2";
+  std::string three_hr_precip = "28%";
+  std::string three_hr_time = "6pm";
 
   // SIZES AND LOCATIONS
   int bg_img_size_x = 64;
@@ -1314,14 +1347,98 @@ void* weatherThread(void *ptr){
 
   printf("Reading from data fifo\n");
 
-  usleep(500*1000); // 50ms
+  usleep(5000*1000); // 1s
   read(data_fd, data_rx, 1024);
   printf("Received %s", data_rx);
 
+  // Get the game state - first item in the string
+  char *token;
+  // Split string into array of strings
+  token = strtok(data_rx,",");
+  if(token != NULL){
+    std::string data(token);
+    status = data;
+    token = strtok(NULL,",");
+  } else {
+    status = "ERROR";
+  }
+
+  if(status=="GOOD") {
+    // PARSING
+    for(int i=0; i<18; i++) {
+      if(token!=NULL) {
+        std::string data(token);
+        switch(i){
+          case 0:
+            curr_temp = data;
+            break;
+          case 1:
+            curr_img_number = data;
+            break;
+          case 2:
+            curr_precip = data;
+            break;
+          case 3:
+            curr_time = data;
+            break;
+          case 4:
+            one_hr_temp = data;
+             break;
+          case 5:
+            one_hr_img_number = data;
+            break;
+          case 6:
+            one_hr_precip = data;
+            break;
+          case 7:
+            one_hr_time = data;
+            break;
+          case 8:
+            two_hr_temp = data;
+            break;
+          case 9:
+            two_hr_img_number = data;
+            break;
+          case 10:
+            two_hr_precip = data;
+            break;
+          case 11:
+            two_hr_time = data;
+            break;
+          case 12:
+            three_hr_temp = data;
+            break;
+          case 13:
+            three_hr_img_number = data;
+            break;
+          case 14:
+            three_hr_precip = data;
+            break;
+          case 15:
+            three_hr_time = data;
+            break;
+          case 16:
+            city_name = data;
+            break;
+          case 17:
+            state_name = data;
+            break;
+        }
+        token = strtok(NULL,",");
+      } else i=18;
+    }
+
+    city_name = city_name + state_name;
+
+  } else if(status=="ERROR") {
+    printf("ERROR IN RETRIEVING DATA \n");
+  }
+
+
   while(!interrupt_received){
     printf("WEAHTER AT MUTEX\n");
-
-    std::string bg_img_fn = weather_img_path + "background-" + curr_img_number + ".png";
+    std::string bg_img_fn = weather_img_path + "background-1.png";
+    //std::string bg_img_fn = weather_img_path + "background-" + curr_img_number + ".png";
     bg_img = LoadImageAndScaleImage(bg_img_fn.c_str(),
                                       bg_img_size_x,
                                       bg_img_size_y);
