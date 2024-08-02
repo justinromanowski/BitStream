@@ -211,4 +211,34 @@ int Font::DrawGlyph(Canvas *c, int x_pos, int y_pos, const Color &color,
   return DrawGlyph(c, x_pos, y_pos, color, NULL, unicode_codepoint);
 }
 
+
+int Font::ScrollGlyph(Canvas *c, int x_pos, int y_pos,
+                    int window_x0, int window_y0, int window_x1, int window_y1, const Color &color,
+                    const Color *bgcolor, uint32_t unicode_codepoint) const {
+  const Glyph *g = FindGlyph(unicode_codepoint);
+  if (g == NULL) g = FindGlyph(kUnicodeReplacementCodepoint);
+  if (g == NULL) return 0;
+  y_pos = y_pos - g->height - g->y_offset;
+
+  if (x_pos + g->device_width < 0 || x_pos > c->width() ||
+      y_pos + g->height < 0 || y_pos > c->height()) {
+    return g->device_width;  // Outside canvas border. Bail out early.
+  }
+
+  for (int y = 0; y < g->height; ++y) {
+    const rowbitmap_t& row = g->bitmap[y];
+    for (int x = 0; x < g->device_width; ++x) {
+      if (row.test(kMaxFontWidth - 1 - x)) {
+        // checks if individual LED is within scroll window
+        if(x >= window_x0 && x <= window_x1 && y >= window_y0 && y <= window_y1) {
+          c->SetPixel(x_pos + x, y_pos + y, color.r, color.g, color.b);
+        }
+      } else if (bgcolor) {
+        c->SetPixel(x_pos + x, y_pos + y, bgcolor->r, bgcolor->g, bgcolor->b);
+      }
+    }
+  }
+  return g->device_width;
+}
+
 }  // namespace rgb_matrix

@@ -95,6 +95,24 @@ int DrawText(Canvas *c, const Font &font,
   return x - start_x;
 }
 
+int ScrollText(Canvas *c, const Font &font, int x, int y,
+               int window_x0, int window_x1, int window_y0, int window_y1,
+               const Color &color, const Color *background_color,
+               const char *utf8_text, int extra_spacing) {
+//  bool within_window_x = (window_x0<=x && x<=window_x1) || (window_x0<=font.CharacterWidth() && font.CharacterWidth()<=window_x1);
+//  bool within_window_y = (window_y0<=y && y<=window_y1) || (window_y0<=font.height() && font.height()<=window_y1);
+//  if(within_window_x && within_window_y) {
+  const int start_x = x;
+  const int start_y = y;
+  while (*utf8_text) {
+    const uint32_t cp = utf8_next_codepoint(utf8_text);
+    x += font.ScrollGlyph(c, x, y, window_x0, window_y0, window_x1, window_y1, color, background_color, cp);
+    x += extra_spacing;
+  }
+//  } // if
+  return x - start_x;
+}
+
 // There used to be a symbol without the optional extra_spacing parameter. Let's
 // define this here so that people linking against an old library will still
 // have their code usable. Now: 2017-06-04; can probably be removed in a couple
