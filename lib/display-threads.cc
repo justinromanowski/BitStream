@@ -227,6 +227,19 @@ void fontSetup() {
 
 // FUNCTION SETUP - THREADS --------------------------------------------------
 // ---------------------------------------------------------------------------
+
+void* clockThread(void*ptr){
+  printf("Entered clock thread");
+  ClockClass* Clock = (class ClockClass*)ptr;
+
+  while(!interrupt_received){
+    Clock->updateTime();
+    Clock->drawDisplay();
+    usleep(200*1000);
+  }
+}
+
+/*
 void* clockThread(void *ptr){
 
   printf("entered clock thread");
@@ -308,6 +321,7 @@ void* clockThread(void *ptr){
   }
   printf("Exited clock thread");
 }
+*/
 
   // -------------------------------------------------------------------------
   // Thread for the image generation on the display, displays the image on the

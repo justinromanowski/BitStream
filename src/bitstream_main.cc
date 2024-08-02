@@ -16,6 +16,7 @@
 #include "graphics.h"
 #include "thread.h"
 #include "display-threads.h"
+#include "display-classes.h"
 //#include "canvas_gpio.h"
 
 #include <time.h>
@@ -211,10 +212,14 @@ int main(int argc, char *argv[]) {
 
   FrameCanvas *offscreen_canvas = canvas->CreateFrameCanvas();
 
+  // CREATE CLASS ARGUMENTS STRUCT
   canvas_args canvas_ptrs;
   canvas_ptrs.canvas = canvas;
   canvas_ptrs.offscreen_canvas = offscreen_canvas;
   canvas_ptrs.canvas_mutex = canvas_mutex;
+
+  // CREATE CLASSES
+  ClockClass *Clock((void*)&canvas_ptrs);
 
   // INITIALIZE INTERRUPTS
   signal(SIGTERM, InterruptHandler);
@@ -287,10 +292,17 @@ int main(int argc, char *argv[]) {
 
 
   // CREATE THREADS
-  if(pthread_create(&clock_canvas_thr, NULL, clockThread, (void*)&canvas_ptrs) != 0) {
+//  if(pthread_create(&clock_canvas_thr, NULL, clockThread, (void*)&canvas_ptrs) != 0) {
+//    printf("ERROR in clock thread creation");
+//    return 2;
+//  }
+
+  if(pthread_create(&clock_canvas_thr, NULL, clockThread, (void*)Clock) != 0) {
     printf("ERROR in clock thread creation");
     return 2;
   }
+
+
 /*
   if(pthread_create(&image_canvas_thr, NULL, imageThread, (void*)&canvas_ptrs) != 0) {
     printf("ERROR in image thread creation");

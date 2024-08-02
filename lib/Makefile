@@ -3,7 +3,7 @@
 # So
 #   -lrgbmatrix
 ##
-OBJECTS=gpio.o led-matrix.o options-initialize.o framebuffer.o display-threads.o\
+OBJECTS=gpio.o led-matrix.o options-initialize.o framebuffer.o display-threads.o display-classes.o\
         thread.o bdf-font.o graphics.o led-matrix-c.o hardware-mapping.o \
         pixel-mapper.o multiplex-mappers.o \
 	content-streamer.o canvas_gpio.o
@@ -200,6 +200,13 @@ display-threads.o : display-threads.cc
 	$(CXX) -I$(INCDIR) $(CXXFLAGS_M) $(MAGICK_CXXFLAGS) -c -o $@ $<
 
 librgbmatrix: display-threads.o #$(RGB_LIBRARY)
+	$(CXX) $< -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
+
+# for classes header
+display-classes.o : display-classes.cc
+	$(CXX) -I$(INCDIR) $(CXXFLAGS_M) $(MAGICK_CXXFLAGS) -c -o $@ $<
+
+librgbmatrix: display-classes.o #$(RGB_LIBRARY)
 	$(CXX) $< -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
 
 # for canvas gpio

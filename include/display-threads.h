@@ -1,6 +1,8 @@
 #ifndef DISPLAY_THREADS_H
 #define DISPLAY_THREADS_H
 
+#include "display-classes.h"
+
 #include "led-matrix.h"
 #include "graphics.h"
 #include "thread.h"
@@ -36,6 +38,8 @@ struct canvas_args{
 };
 
 void fontSetup();
+
+//void threadSleep(int length);
 
 void* clockThread(void *ptr);
 
