@@ -96,7 +96,7 @@ int DrawText(Canvas *c, const Font &font,
 }
 
 int ScrollText(Canvas *c, const Font &font, int x, int y,
-               int window_x0, int window_x1, int window_y0, int window_y1,
+               int window_x0, int window_y0, int window_x1, int window_y1,
                const Color &color, const Color *background_color,
                const char *utf8_text, int extra_spacing) {
 //  bool within_window_x = (window_x0<=x && x<=window_x1) || (window_x0<=font.CharacterWidth() && font.CharacterWidth()<=window_x1);

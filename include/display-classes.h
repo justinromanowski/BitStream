@@ -29,16 +29,19 @@
   using rgb_matrix::Canvas;
   using rgb_matrix::RGBMatrix;
   using rgb_matrix::FrameCanvas;
+  using ImageVector = std::vector<Magick::Image>;
 
 /////////////////////////////////////////////////////////////////////////////
 // FUNCTIONS //
 /////////////////////////////////////////////////////////////////////////////
-/*
-  void fontSetup();
+
+  extern void fontSetup();
+
 
   ImageVector LoadImageAndScaleImage(const char *filename,
                                      int target_width,
                                      int target_height);
+
 
   void CopyImageToCanvas(const Magick::Image &image, Canvas *canvas,
                        const int *x_pos, const int *y_pos);
@@ -50,24 +53,22 @@
                          const int *x_pos, const int *y_pos,
                          FrameCanvas *offscreen_canvas);
 
-  bool FullSaturation(const rgb_matrix::Color &c) {
-    return (c.r == 0 || c.r == 255)
-      && (c.g == 0 || c.g == 255)
-      && (c.b == 0 || c.b == 255);
-  }
-*/
+  void SetCanvasArea(FrameCanvas *offscreen_canvas, int x, int y,
+                     int width, int height, rgb_matrix::Color *color);
+
+  bool FullSaturation(const rgb_matrix::Color &c);
+
 
 /////////////////////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES  //
 /////////////////////////////////////////////////////////////////////////////
 
   // FONTS //
-  rgb_matrix::Font seven_fourteen_font;
-  rgb_matrix::Font four_six_font;
-  rgb_matrix::Font five_seven_font;
-  rgb_matrix::Font six_ten_font;
-  rgb_matrix::Font eight_thirteen_font;
-  rgb_matrix::Font *outline_font = NULL;
+  extern rgb_matrix::Font seven_fourteen_font;
+  extern rgb_matrix::Font four_six_font;
+  extern rgb_matrix::Font five_seven_font;
+  extern rgb_matrix::Font six_ten_font;
+  extern rgb_matrix::Font eight_thirteen_font;
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -77,7 +78,7 @@
   struct canvas_args{
     RGBMatrix *canvas;
     FrameCanvas *offscreen_canvas;
-    pthread_mutex_t canvas_mutex;
+    pthread_mutex_t *canvas_mutex;
   };
 
 
@@ -87,7 +88,7 @@
       // LED MATRIX VARIABLES //
       RGBMatrix *canvas;
       FrameCanvas *offscreen_canvas;
-      pthread_mutex_t canvas_mutex;
+      pthread_mutex_t *canvas_mutex;
 
       // CLOCK VARIABLES //
       static const char wday_name[][4];

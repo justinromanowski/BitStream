@@ -18,16 +18,23 @@ using ImageVector = std::vector<Magick::Image>;
 
 extern volatile bool interrupt_received;
 
+rgb_matrix::Font seven_fourteen_font;
+rgb_matrix::Font four_six_font;
+rgb_matrix::Font five_seven_font;
+rgb_matrix::Font six_ten_font;
+rgb_matrix::Font eight_thirteen_font;
+
 /////////////////////////////////////////////////////////////////////////////
 // FUNCTIONS //
 /////////////////////////////////////////////////////////////////////////////
 
-static ImageVector LoadImageAndScaleImage(const char *filename,
-                                          int target_width,
-                                          int target_height) {
+ImageVector LoadImageAndScaleImage(const char *filename,
+                                   int target_width,
+                                   int target_height) {
   // Given the filename, load the image and scale to the size of the matrix.
   // If this is an animated image, the resutlting vector will contain multiple.
 
+  //Magick::InitializeMagick(NULL);
   ImageVector result;
 
   ImageVector frames;
@@ -112,13 +119,6 @@ void ShowAnimatedImage(const Magick::Image &image, RGBMatrix *canvas,
 }
 
 
-static bool FullSaturation(const rgb_matrix::Color &c) {
-  return (c.r == 0 || c.r == 255)
-    && (c.g == 0 || c.g == 255)
-    && (c.b == 0 || c.b == 255);
-}
-
-
 void SetCanvasArea(FrameCanvas *offscreen_canvas, int x, int y,
                      int width, int height, rgb_matrix::Color *color) {
   for (int iy = 0; iy < height; ++iy) {
@@ -126,6 +126,13 @@ void SetCanvasArea(FrameCanvas *offscreen_canvas, int x, int y,
       offscreen_canvas->SetPixel(x + ix, y + iy, color->r, color->g, color->b);
     }
   }
+}
+
+
+bool FullSaturation(const rgb_matrix::Color &c) {
+  return (c.r == 0 || c.r == 255)
+    && (c.g == 0 || c.g == 255)
+    && (c.b == 0 || c.b == 255);
 }
 
 
@@ -199,11 +206,15 @@ void fontSetup() {
 
 ClockClass::ClockClass(void *ptr) {
   // Load in the necessary pointers and objects
+  if(ptr==NULL) {
+    printf("ERROR: NULL POINTER");
+  }
+
   canvas_args *canvas_ptrs = (struct canvas_args*)ptr;
 
   canvas = canvas_ptrs->canvas;
-  FrameCanvas *offscreen_canvas = canvas_ptrs->offscreen_canvas;
-  pthread_mutex_t canvas_mutex = canvas_ptrs->canvas_mutex;
+  offscreen_canvas = canvas_ptrs->offscreen_canvas;
+  canvas_mutex = canvas_ptrs->canvas_mutex;
 
   printf("Clock Class initialized");
 }
@@ -229,10 +240,18 @@ void ClockClass::updateTime() {
   sprintf(sec_str, "%.2d AM", time_ptr->tm_sec);
   sprintf(date_str, "%.3s %.3s %.2d %d", wday_name[time_ptr->tm_wday], mon_name[time_ptr->tm_mon],
                                          time_ptr->tm_mday, 1900+(time_ptr->tm_year));
+
+  printf("TIME UPDATED\n");
 }
 
 void ClockClass::drawDisplay() {
-  pthread_mutex_lock(&canvas_mutex);
+  printf("before mutex\n");
+
+  pthread_mutex_lock(canvas_mutex);
+  printf("CLCOK AT MUTEX\n");
+
+  SetCanvasArea(offscreen_canvas, 0, 45, 64, (64-45), &bg_color);
+
   // Draw the updated time onto the display
   rgb_matrix::DrawText(offscreen_canvas, seven_fourteen_font, time_x, time_y + seven_fourteen_font.baseline(),
                        color, NULL, time_str,
@@ -249,5 +268,5 @@ void ClockClass::drawDisplay() {
   //offscreen_canvas = canvas->SwapOnVSync(offscreen_canvas);
   canvas->SwapOnVSync(offscreen_canvas);
 
-  pthread_mutex_unlock(&canvas_mutex);
+  pthread_mutex_unlock(canvas_mutex);
 }

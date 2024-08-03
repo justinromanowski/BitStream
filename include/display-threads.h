@@ -30,14 +30,17 @@
 using rgb_matrix::Canvas;
 using rgb_matrix::RGBMatrix;
 using rgb_matrix::FrameCanvas;
+using ImageVector = std::vector<Magick::Image>;
 
+/*
 struct canvas_args{
   RGBMatrix *canvas;
   FrameCanvas *offscreen_canvas;
   pthread_mutex_t canvas_mutex;
 };
+*/
 
-void fontSetup();
+//void fontSetup();
 
 //void threadSleep(int length);
 

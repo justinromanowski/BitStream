@@ -225,12 +225,16 @@ int Font::ScrollGlyph(Canvas *c, int x_pos, int y_pos,
     return g->device_width;  // Outside canvas border. Bail out early.
   }
 
+printf("Window dims = %d, %d, %d, %d\n", window_x0, window_y0, window_x1, window_y1);
+
   for (int y = 0; y < g->height; ++y) {
     const rowbitmap_t& row = g->bitmap[y];
     for (int x = 0; x < g->device_width; ++x) {
       if (row.test(kMaxFontWidth - 1 - x)) {
         // checks if individual LED is within scroll window
-        if(x >= window_x0 && x <= window_x1 && y >= window_y0 && y <= window_y1) {
+printf("Checking pixel %d, %d\n", y+y_pos, x+x_pos);
+        if((x+x_pos) >= window_x0 && (x+x_pos) <= window_x1 && (y+y_pos) >= window_y0 && (y+y_pos) <= window_y1) {
+printf("Pixel good\n\n");
           c->SetPixel(x_pos + x, y_pos + y, color.r, color.g, color.b);
         }
       } else if (bgcolor) {

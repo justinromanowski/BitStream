@@ -17,7 +17,7 @@
 #include "thread.h"
 #include "display-threads.h"
 #include "display-classes.h"
-//#include "canvas_gpio.h"
+#include "canvas_gpio.h"
 
 #include <time.h>
 #include <getopt.h>
@@ -33,6 +33,8 @@
 #include <pthread.h>
 #include <wiringPi.h>
 
+#include <errno.h>
+
 #include <string.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -45,7 +47,7 @@ using rgb_matrix::Canvas;
 using rgb_matrix::RGBMatrix;
 using rgb_matrix::FrameCanvas;
 
-
+/*
 // ROTARY ENCODER /////////////////////////////////////////////////////////////
 // STATE MACHINE VARIABLES - ROTARY ENCODER
 // A_AB means that A had a falling edge first
@@ -60,6 +62,7 @@ using rgb_matrix::FrameCanvas;
 #define B_10 4
 #define B_00 5
 #define B_01 6
+*/
 
 // STATE MACHINE VARIABLES - APPS
 #define IMAGE 0
@@ -67,13 +70,14 @@ using rgb_matrix::FrameCanvas;
 #define BASEBALL 2
 
 
-const int outputApin = 25;
-const int outputBpin = 24;
-const int switchpin = 23;
+//const int outputApin = 25;
+//const int outputBpin = 24;
+//const int switchpin = 23;
 
 
 volatile bool app_change = false;
 
+/*
 int rot_enc_state = IDLE_11;
 int count = 0;
 int prev_count = 0;
@@ -154,6 +158,41 @@ int prev_count = 0;
       printf("Switch pressed\n");
     }
 ////////////////////////////////////////////////////////////////////////////
+*/
+
+/*
+int count = 0;
+int prev_A_value = 0;
+
+static void rotateInterrupt(void) {
+  int A_value = digitalRead(outputApin);
+  int B_value = digitalRead(outputBpin);
+
+  printf("A value = %d, B value = %d\n", A_value, B_value);
+  // Analyze direction
+  if(A_value != prev_A_value){
+    if(A_value == B_value) {
+      printf("Counter clockwise rotation\n");
+      count--;
+    } else {
+      printf("Clockwise rotation\n");
+      count++;
+    }
+    prev_A_value = A_value;
+    printf("Count = %d\n", count);
+  } else {printf("ROTARY ENCODER BOUNCING\n");}
+}
+
+static void switchInterrupt(void){
+  int A_value = digitalRead(outputApin);
+  int B_value = digitalRead(outputBpin);
+
+  printf("A value = %d, B value = %d\n", A_value, B_value);
+
+  printf("Switch pressed\n");
+}
+*/
+
 
 // GLOBAL VARIABLE DECLARATIONS ----------------------------------------------
 // ---------------------------------------------------------------------------
@@ -162,7 +201,7 @@ using ImageVector = std::vector<Magick::Image>;
 const int screen_divider = 44;
 
 pthread_t image_canvas_thr, clock_canvas_thr, spotify_canvas_thr, baseball_canvas_thr, weather_canvas_thr;
-pthread_mutex_t canvas_mutex;
+//pthread_mutex_t canvas_mutex;
 
 
 // FUNCTION SETUP - INTERRUPTS -----------------------------------------------
@@ -170,16 +209,16 @@ pthread_mutex_t canvas_mutex;
   // Used to peacefully terminate the program's execution
   // -------------------------------------------------------------------------
 volatile bool interrupt_received = false;
+
 static void InterruptHandler(int signo) {
   interrupt_received = true;
 }
 
-
-static bool FullSaturation(const rgb_matrix::Color &c) {
-  return (c.r == 0 || c.r == 255)
-    && (c.g == 0 || c.g == 255)
-    && (c.b == 0 || c.b == 255);
-}
+//static bool FullSaturation(const rgb_matrix::Color &c) {
+//  return (c.r == 0 || c.r == 255)
+//    && (c.g == 0 || c.g == 255)
+//    && (c.b == 0 || c.b == 255);
+//}
 
 // MAIN FUNCTION -------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -187,13 +226,36 @@ static bool FullSaturation(const rgb_matrix::Color &c) {
 int main(int argc, char *argv[]) {
   // GPIO Setup
   //  RotaryEncoder rotary_encoder;
-/*printf("trying wiringpi\n");
+/*
+printf("trying wiringpi\n");
+
   if(wiringPiSetup() == -1) {
     printf("Error setting up wiringPi\n");
     return 1;
   }
-  printf("GPIO setup ok\n");
+
+printf("GPIO setup ok\n");
+
+  // GPIO Pin Initialization
+  pinMode(outputApin, INPUT);
+  pinMode(outputBpin, INPUT);
+  pinMode(switchpin, INPUT);
+
+  // Set input as pullup
+  pullUpDnControl(outputApin, PUD_UP);
+  pullUpDnControl(outputBpin, PUD_UP);
+  pullUpDnControl(switchpin, PUD_UP);
+
+  if(wiringPiISR(outputApin, INT_EDGE_BOTH, &rotateInterrupt) < 0)
+    {
+    fprintf (stderr, "Unable to setup ISR: %s\n", strerror (errno));
+    return 1;
+    }
+
+  wiringPiISR(switchpin, INT_EDGE_RISING, &switchInterrupt);
 */
+
+gpioSetup();
 
   // INITIALIZE MATRIX AND IMAGE
   RGBMatrix::Options matrix_options;
@@ -212,14 +274,24 @@ int main(int argc, char *argv[]) {
 
   FrameCanvas *offscreen_canvas = canvas->CreateFrameCanvas();
 
+  // PTHREAD RELATED
+  pthread_mutex_t canvas_mutex;
+
   // CREATE CLASS ARGUMENTS STRUCT
   canvas_args canvas_ptrs;
   canvas_ptrs.canvas = canvas;
   canvas_ptrs.offscreen_canvas = offscreen_canvas;
-  canvas_ptrs.canvas_mutex = canvas_mutex;
+  canvas_ptrs.canvas_mutex = &canvas_mutex;
 
   // CREATE CLASSES
-  ClockClass *Clock((void*)&canvas_ptrs);
+  void *canvas_void_ptr = (void*)&canvas_ptrs;
+  if(canvas_void_ptr==NULL){
+    printf("ERROR: CANVAS_PTR NULL\n");
+    return 5;
+  }
+
+  ClockClass clock((void*)&canvas_ptrs);
+  ClockClass *Clock = &clock;
 
   // INITIALIZE INTERRUPTS
   signal(SIGTERM, InterruptHandler);
@@ -273,9 +345,9 @@ int main(int argc, char *argv[]) {
       wiringPiISR(switchpin, INT_EDGE_RISING, &switchInterrupt);
 */
       // ROT END
-      rot_enc_state = IDLE_11;
-      count = 0;
-      prev_count = 0;
+     // rot_enc_state = IDLE_11;
+     // count = 0;
+     // prev_count = 0;
       app_change = false;
 
 
@@ -309,24 +381,24 @@ int main(int argc, char *argv[]) {
    return 2;
   }
 */
-/*
+
   if(pthread_create(&spotify_canvas_thr, NULL, spotifyThread, (void*)&canvas_ptrs) != 0) {
     printf("ERROR in spotify thread creation");
     return 2;
   }
-*/
+
 /*
   if(pthread_create(&baseball_canvas_thr, NULL, baseballThread, (void*)&canvas_ptrs) != 0) {
     printf("ERROR in baseball thread creation");
     return 2;
   }
 */
-
+/*
   if(pthread_create(&weather_canvas_thr, NULL, weatherThread, (void*)&canvas_ptrs) != 0) {
     printf("ERROR in weather thread creation");
     return 2;
   }
-
+*/
   // JOIN THREADS TOGETHER
   // Join the threads to main thread -- don't execute cleanup code
   // until interrupt is received
@@ -346,24 +418,24 @@ int main(int argc, char *argv[]) {
     return 3;
   }
 */
-/*
+
   if(pthread_join(spotify_canvas_thr, &spotify_ret) != 0) {
     printf("ERROR in spotify thread joining");
     return 3;
   }
-*/
+
 /*
   if(pthread_join(baseball_canvas_thr, &baseball_ret) != 0) {
     printf("ERROR in baseball thread joining");
     return 3;
   }
 */
-
+/*
   if(pthread_join(weather_canvas_thr, &weather_ret) != 0) {
     printf("ERROR in weather thread joining");
     return 3;
   }
-
+*/
   // CLEANUP AND EXIT CLEANLY
   // Program is exited, shut down the RGB Matrix
   printf("Exiting... clearing canvas\n");

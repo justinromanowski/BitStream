@@ -1,12 +1,16 @@
-#include "canvas_gpio.h"
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <wiringPi.h>
+#include <unistd.h>
 
+const int outputApin = 25;
+const int outputBpin = 24;
+const int switchpin = 23;
 
 int count = 0;
-int prev_A_value = 0;
-
-static const int outputApin = 25;
-static const int outputBpin = 24;
-static const int switchpin = 23;
+int prev_A_value;
 
 void rotateInterrupt(void) {
   int A_value = digitalRead(outputApin);
@@ -36,12 +40,13 @@ void switchInterrupt(void){
   printf("Switch pressed\n");
 }
 
-void gpioSetup(void) {
+int main(void) {
 
   // GPIO Setup
   if(wiringPiSetup() == -1) {
     printf("Error setting up wiringPi\n");
-    }
+    return 1;
+  }
 
   printf("GPIO setup ok");
 
@@ -58,4 +63,8 @@ void gpioSetup(void) {
   wiringPiISR(outputApin, INT_EDGE_BOTH, &rotateInterrupt);
 //  wiringPiISR(outputBpin, INT_EDGE_FALLING, &rotateInterrupt);
   wiringPiISR(switchpin, INT_EDGE_RISING, &switchInterrupt);
+
+  sleep(30);
+
+  return 0;
 }

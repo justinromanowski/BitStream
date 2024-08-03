@@ -16,7 +16,7 @@ using rgb_matrix::FrameCanvas;
 using ImageVector = std::vector<Magick::Image>;
 
 // Passed to all threads that need to use the canvas
-struct canvas_args canvas_ptrs;
+//struct canvas_args canvas_ptrs;
 
 extern volatile bool interrupt_received;
 
@@ -39,6 +39,8 @@ ImageVector images;
 int cmd_fd;
 int data_fd;
 
+/*
+
 // FONTS
 rgb_matrix::Font time_font;
 rgb_matrix::Font date_font;
@@ -51,6 +53,7 @@ rgb_matrix::Font *outline_font = NULL;
   // Given the filename, load the image and scale to the size of the matrix.
   // If this is an animated image, the resutlting vector will contain multiple.
   // -------------------------------------------------------------------------
+
 static ImageVector LoadImageAndScaleImage(const char *filename,
                                           int target_width,
                                           int target_height) {
@@ -224,13 +227,14 @@ void fontSetup() {
   }
 
 }
+*/
 
 // FUNCTION SETUP - THREADS --------------------------------------------------
 // ---------------------------------------------------------------------------
 
-void* clockThread(void*ptr){
+void* clockThread(void* ptr){
   printf("Entered clock thread");
-  ClockClass* Clock = (class ClockClass*)ptr;
+  ClockClass *Clock = (ClockClass*)ptr;
 
   while(!interrupt_received){
     Clock->updateTime();
@@ -334,7 +338,7 @@ void* imageThread(void *ptr){
   struct canvas_args *canvas_ptrs = (struct canvas_args*)ptr;
   RGBMatrix *canvas = canvas_ptrs->canvas;
   FrameCanvas *offscreen_canvas = canvas_ptrs->offscreen_canvas;
-  pthread_mutex_t canvas_mutex = canvas_ptrs->canvas_mutex;
+  pthread_mutex_t *canvas_mutex = canvas_ptrs->canvas_mutex;
 
   Magick::InitializeMagick(NULL);
 
@@ -347,19 +351,19 @@ void* imageThread(void *ptr){
   while(!interrupt_received) {
 
     // PUT IMAGE ONTO CANVAS
-    pthread_mutex_lock(&canvas_mutex);
+    pthread_mutex_lock(canvas_mutex);
     printf("Image at MUTEX\n");
 
     switch (images.size()) {
     case 0:   // failed to load image.
-      pthread_mutex_unlock(&canvas_mutex);
+      pthread_mutex_unlock(canvas_mutex);
       break;
     case 1:   // Simple example: one image to show
       // Shanty code with the delays, but it works
 
       CopyImageToCanvas(images[0], offscreen_canvas, &offset_x, &offset_y);
       canvas->SwapOnVSync(offscreen_canvas);
-      pthread_mutex_unlock(&canvas_mutex);
+      pthread_mutex_unlock(canvas_mutex);
 
       usleep(still_image_sleep*3);
       break;
@@ -367,7 +371,7 @@ void* imageThread(void *ptr){
      //FrameCanvas *offscreen_canvas = canvas->CreateFrameCanvas();
      for (const auto &image : images) {
        ShowAnimatedImage(image,canvas, &offset_x, &offset_y, offscreen_canvas);
-       pthread_mutex_unlock(&canvas_mutex);
+       pthread_mutex_unlock(canvas_mutex);
        usleep(image.animationDelay() * 10000);  // 1/100s converted to usec
      }
       break;
@@ -386,7 +390,7 @@ void* spotifyThread(void *ptr){
   struct canvas_args *canvas_ptrs = (struct canvas_args*)ptr;
   RGBMatrix *canvas = canvas_ptrs->canvas;
   FrameCanvas *offscreen_canvas = canvas_ptrs->offscreen_canvas;
-  pthread_mutex_t canvas_mutex = canvas_ptrs->canvas_mutex;
+  pthread_mutex_t *canvas_mutex = canvas_ptrs->canvas_mutex;
 
   Magick::InitializeMagick(NULL);
 
@@ -460,7 +464,7 @@ void* spotifyThread(void *ptr){
     // TWO COUNTS RUNNING: one for scrolling text (200ms)
     // one for sending API requests (3s)
 
-    pthread_mutex_lock(&canvas_mutex);
+    pthread_mutex_lock(canvas_mutex);
 
     printf("SPOTIFY AT MUTEX\n");
 
@@ -647,16 +651,16 @@ auto t3 = high_resolution_clock::now();
     SetCanvasArea(offscreen_canvas, song_x_orig, song_y_orig, 64, 7, &bg_color);
 
     // Artist and song name
-    song_len = rgb_matrix::DrawText(offscreen_canvas, five_seven_font, song_x, song_y_orig + five_seven_font.baseline(),
-                         progress_bar_color, outline_font ? NULL : &bg_color, song_name.c_str(), letter_spacing);
+    song_len = rgb_matrix::ScrollText(offscreen_canvas, five_seven_font, song_x, song_y_orig + five_seven_font.baseline(),
+                         song_x_orig, song_y_orig, 64, song_y_orig+five_seven_font.height()+five_seven_font.baseline(), progress_bar_color, NULL, song_name.c_str(), letter_spacing);
 
-    SetCanvasArea(offscreen_canvas, 0, artist_y_orig, 64/*artist_x_orig-1*/, 6, &bg_color);
+    SetCanvasArea(offscreen_canvas, artist_x_orig, artist_y_orig, 64-artist_x_orig, 6, &bg_color);
 
-    artist_len = rgb_matrix::DrawText(offscreen_canvas, date_font, artist_x, artist_y_orig + date_font.baseline(),
-                         progress_bar_color, outline_font ? NULL : &bg_color, artist_name.c_str(),
+    artist_len = rgb_matrix::ScrollText(offscreen_canvas, four_six_font, artist_x, artist_y_orig + four_six_font.baseline(),
+                         artist_x_orig, artist_y_orig, 64, artist_y_orig+four_six_font.height()+four_six_font.baseline(), progress_bar_color, NULL, artist_name.c_str(),
                          letter_spacing);
 
-    SetCanvasArea(offscreen_canvas, artist_x_orig-2, artist_y_orig, 2, 6, &bg_color);
+//    SetCanvasArea(offscreen_canvas, artist_x_orig-2, artist_y_orig, 2, 6, &bg_color);
 
 /////////////////////////////////////////// TESTING
     auto t1 = high_resolution_clock::now();
@@ -717,7 +721,7 @@ auto t3 = high_resolution_clock::now();
 
     canvas->SwapOnVSync(offscreen_canvas);
     //offscreen_canvas = canvas->SwapOnVSync(offscreen_canvas);
-    pthread_mutex_unlock(&canvas_mutex);
+    pthread_mutex_unlock(canvas_mutex);
 
     usleep(200*1000);
     usleep_count += 0.2;
@@ -752,7 +756,7 @@ void* baseballThread(void* ptr) {
   struct canvas_args *canvas_ptrs = (struct canvas_args*)ptr;
   RGBMatrix *canvas = canvas_ptrs->canvas;
   FrameCanvas *offscreen_canvas = canvas_ptrs->offscreen_canvas;
-  pthread_mutex_t canvas_mutex = canvas_ptrs->canvas_mutex;
+  pthread_mutex_t *canvas_mutex = canvas_ptrs->canvas_mutex;
 
   Magick::InitializeMagick(NULL);
 
@@ -897,7 +901,7 @@ void* baseballThread(void* ptr) {
   char data_rx[1024];
 
   while(!interrupt_received) {
-    pthread_mutex_lock(&canvas_mutex);
+    pthread_mutex_lock(canvas_mutex);
     printf("BASEBALL AT MUTEX\n");
 
     cmd_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/cmd_cc_to_py",O_WRONLY|O_NONBLOCK);
@@ -1058,10 +1062,10 @@ void* baseballThread(void* ptr) {
       CopyImageToCanvasTransparent(home_logo[0], offscreen_canvas, &home_x, &home_y);
       CopyImageToCanvasTransparent(away_logo[0], offscreen_canvas, &away_x, &away_y);
 
-      rgb_matrix::DrawText(offscreen_canvas, time_font, home_x+5, home_y+18 + time_font.baseline(),
+      rgb_matrix::DrawText(offscreen_canvas, seven_fourteen_font, home_x+5, home_y+18 + seven_fourteen_font.baseline(),
                            home_second, NULL, home_score.c_str(), letter_spacing);
 
-      rgb_matrix::DrawText(offscreen_canvas, time_font, away_x+5, away_y+18 + time_font.baseline(),
+      rgb_matrix::DrawText(offscreen_canvas, seven_fourteen_font, away_x+5, away_y+18 + seven_fourteen_font.baseline(),
                            away_second, NULL, away_score.c_str(), letter_spacing);
 
 
@@ -1118,10 +1122,10 @@ void* baseballThread(void* ptr) {
       CopyImageToCanvasTransparent(home_logo[0], offscreen_canvas, &home_x, &home_y);
       CopyImageToCanvasTransparent(away_logo[0], offscreen_canvas, &away_x, &away_y);
 
-      rgb_matrix::DrawText(offscreen_canvas, time_font, home_x+5, home_y+18 + time_font.baseline(),
+      rgb_matrix::DrawText(offscreen_canvas, seven_fourteen_font, home_x+5, home_y+18 + seven_fourteen_font.baseline(),
                            home_second, NULL, home_score.c_str(), letter_spacing);
 
-      rgb_matrix::DrawText(offscreen_canvas, time_font, away_x+5, away_y+18 + time_font.baseline(),
+      rgb_matrix::DrawText(offscreen_canvas, seven_fourteen_font, away_x+5, away_y+18 + seven_fourteen_font.baseline(),
                            away_second, NULL, away_score.c_str(), letter_spacing);
 
       // Middle scoreboard
@@ -1154,11 +1158,11 @@ void* baseballThread(void* ptr) {
         SetCanvasArea(offscreen_canvas, inning_x, bot_inning_y, 5, 3, &blank);
       }
 
-      rgb_matrix::DrawText(offscreen_canvas, six_ten_font, inning_x, top_inning_y+6 + date_font.baseline(),
+      rgb_matrix::DrawText(offscreen_canvas, six_ten_font, inning_x, top_inning_y+6 + six_ten_font.baseline(),
                            scoreboard_color, NULL, inning.c_str(), letter_spacing);
 
       // BALL
-      rgb_matrix::DrawText(offscreen_canvas, date_font, circles_text_x, ball_y + date_font.baseline(),
+      rgb_matrix::DrawText(offscreen_canvas, four_six_font, circles_text_x, ball_y + four_six_font.baseline(),
                            scoreboard_color, NULL, b, letter_spacing);
 
       int cir_pos_temp = first_cir_x;
@@ -1175,7 +1179,7 @@ void* baseballThread(void* ptr) {
       //CopyImageToCanvasTransparent(empty_circle[0], offscreen_canvas, &third_cir_x, &ball_y);
 
       // STRIKE
-      rgb_matrix::DrawText(offscreen_canvas, date_font, circles_text_x, strike_y + date_font.baseline(),
+      rgb_matrix::DrawText(offscreen_canvas, four_six_font, circles_text_x, strike_y + four_six_font.baseline(),
                            scoreboard_color, NULL, s, letter_spacing);
 
       cir_pos_temp = first_cir_x;
@@ -1191,7 +1195,7 @@ void* baseballThread(void* ptr) {
       //CopyImageToCanvasTransparent(empty_circle[0], offscreen_canvas, &second_cir_x, &strike_y);
 
       // OUT
-      rgb_matrix::DrawText(offscreen_canvas, date_font, circles_text_x, out_y + date_font.baseline(),
+      rgb_matrix::DrawText(offscreen_canvas, four_six_font, circles_text_x, out_y + four_six_font.baseline(),
                            scoreboard_color, NULL, o, letter_spacing);
 
       cir_pos_temp = first_cir_x;
@@ -1241,10 +1245,10 @@ void* baseballThread(void* ptr) {
       CopyImageToCanvasTransparent(home_logo[0], offscreen_canvas, &home_x, &home_y);
       CopyImageToCanvasTransparent(away_logo[0], offscreen_canvas, &away_x, &away_y);
 
-      rgb_matrix::DrawText(offscreen_canvas, time_font, home_x+5, home_y+18 + time_font.baseline(),
+      rgb_matrix::DrawText(offscreen_canvas, seven_fourteen_font, home_x+5, home_y+18 + seven_fourteen_font.baseline(),
                            home_second, NULL, home_score.c_str(), letter_spacing);
 
-      rgb_matrix::DrawText(offscreen_canvas, time_font, away_x+5, away_y+18 + time_font.baseline(),
+      rgb_matrix::DrawText(offscreen_canvas, seven_fourteen_font, away_x+5, away_y+18 + seven_fourteen_font.baseline(),
                            away_second, NULL, away_score.c_str(), letter_spacing);
 
     } else if(game_state == "nogame") {
@@ -1268,7 +1272,7 @@ void* baseballThread(void* ptr) {
     }
 
     canvas->SwapOnVSync(offscreen_canvas);
-    pthread_mutex_unlock(&canvas_mutex);
+    pthread_mutex_unlock(canvas_mutex);
     usleep(10*1000*1000); // sleep 10s
   }
   printf("Exited baseball thread\n");
@@ -1279,26 +1283,34 @@ void* weatherThread(void *ptr){
   struct canvas_args *canvas_ptrs = (struct canvas_args*)ptr;
   RGBMatrix *canvas = canvas_ptrs->canvas;
   FrameCanvas *offscreen_canvas = canvas_ptrs->offscreen_canvas;
-  pthread_mutex_t canvas_mutex = canvas_ptrs->canvas_mutex;
+  pthread_mutex_t *canvas_mutex = canvas_ptrs->canvas_mutex;
+
 
   Magick::InitializeMagick(NULL);
   int letter_spacing = 0;
 
   // COLORS ////////////////////////////////////////
   rgb_matrix::Color weather_text_color(10, 10, 10);
-
+  rgb_matrix::Color color_test(150, 150, 150);
   // FILEPATHS /////////////////////////////////////
   std::string weather_img_path = "images/weather/";
-  std::string raindrop_img_fn = weather_img_path + "raindrop.png";
+  std::string raindrop_path = weather_img_path + "raindrop.png";
+printf("%s\n", raindrop_path.c_str());
 
+  const char *raindrop_img_fn = raindrop_path.c_str();
   // WEATHER DATA VARIABLES ///////////////////////
+
   ImageVector bg_img;
   ImageVector curr_img;
   ImageVector one_hr_img;
   ImageVector raindrop_img;
 
-  raindrop_img  = LoadImageAndScaleImage(raindrop_img_fn.c_str(),
-                                         5, 8);
+printf("ABOUT TO LOAD IMAGES\n");
+
+  raindrop_img = LoadImageAndScaleImage(raindrop_img_fn,
+                                        5, 8);
+
+printf("rAINDROP LOADED IN\n");
 
   std::string status;
   std::string city_name = "Naples";
@@ -1451,23 +1463,28 @@ void* weatherThread(void *ptr){
 
   while(!interrupt_received){
     printf("WEAHTER AT MUTEX\n");
-    std::string bg_img_fn = weather_img_path + "background-1.png";
+    std::string bg_img_path = weather_img_path + "background-1.png";
     //std::string bg_img_fn = weather_img_path + "background-" + curr_img_number + ".png";
-    bg_img = LoadImageAndScaleImage(bg_img_fn.c_str(),
+    const char *bg_img_fn = bg_img_path.c_str();
+    bg_img = LoadImageAndScaleImage(bg_img_fn,
                                       bg_img_size_x,
                                       bg_img_size_y);
 
-    std::string curr_img_fn = weather_img_path + "weather-" + curr_img_number + ".png";
-    curr_img = LoadImageAndScaleImage(curr_img_fn.c_str(),
+    std::string curr_img_path = weather_img_path + "weather-" + curr_img_number + ".png";
+    const char *curr_img_fn = curr_img_path.c_str();
+    curr_img = LoadImageAndScaleImage(curr_img_fn,
                                       curr_img_size,
                                       curr_img_size);
 
-    std::string one_hr_img_fn = weather_img_path + "weather-" + one_hr_img_number + ".png";
-    one_hr_img = LoadImageAndScaleImage(one_hr_img_fn.c_str(),
+    std::string one_hr_img_path = weather_img_path + "weather-" + one_hr_img_number + ".png";
+    const char *one_hr_img_fn = one_hr_img_path.c_str();
+    one_hr_img = LoadImageAndScaleImage(one_hr_img_fn,
                                         small_img_size,
                                         small_img_size);
 
-    pthread_mutex_lock(&canvas_mutex);
+printf("IMG ALL LOADED\n");
+
+    pthread_mutex_lock(canvas_mutex);
 
     // DISPLAYING WEATHER IMAGES
       CopyImageToCanvas(bg_img[0], offscreen_canvas, &bg_img_x, &bg_img_y);
@@ -1476,7 +1493,7 @@ void* weatherThread(void *ptr){
 //    CopyImageToCanvas(one_hr_img[0], offscreen_canvas, &one_hr_img_x, &one_hr_img_y);
 
 
-    rgb_matrix::DrawText(offscreen_canvas, time_font, curr_text_x, curr_temp_y + time_font.baseline(),
+    rgb_matrix::DrawText(offscreen_canvas, seven_fourteen_font, curr_text_x, curr_temp_y + seven_fourteen_font.baseline(),
                          weather_text_color, NULL, curr_temp.c_str(), letter_spacing);
 
     rgb_matrix::DrawText(offscreen_canvas, five_seven_font, curr_text_x, city_y + five_seven_font.baseline(),
@@ -1485,8 +1502,11 @@ void* weatherThread(void *ptr){
     rgb_matrix::DrawText(offscreen_canvas, five_seven_font, curr_text_x, precip_y + five_seven_font.baseline(),
                          weather_text_color, NULL, curr_precip.c_str(), letter_spacing);
 
+    rgb_matrix::ScrollText(offscreen_canvas, five_seven_font, 0, 31 + five_seven_font.baseline(), 10, 40, 33, 42,
+                           color_test, NULL, city_name.c_str(), letter_spacing);
+
     canvas->SwapOnVSync(offscreen_canvas);
-    pthread_mutex_unlock(&canvas_mutex);
+    pthread_mutex_unlock(canvas_mutex);
     usleep(10*1000*1000);
   }
 

@@ -67,9 +67,9 @@ public:
   // The ownership of the returned pointer is passed to the caller.
   Font *CreateOutlineFont() const;
 
-  int Font::ScrollGlyph(Canvas *c, int x_pos, int y_pos,
-                    int window_x0, int window_y0, int window_x1, int window_y1, const Color &color,
-                    const Color *bgcolor, uint32_t unicode_codepoint) const;
+  int ScrollGlyph(Canvas *c, int x_pos, int y_pos,
+                  int window_x0, int window_y0, int window_x1, int window_y1, const Color &color,
+                  const Color *bgcolor, uint32_t unicode_codepoint) const;
 
 private:
   Font(const Font& x);  // No copy constructor. Use references or pointer instead.
