@@ -376,10 +376,11 @@ printf("NEW APP SELECTED - %d\n", encX_count);
 
     }
 
-      if(active_app_thr_ptr==NULL){
-        printf("ERROR: Active app thr ptr null, encX count = %d\n", encX_count);
-        return 5;
-      }
+//      if(active_app_thr_ptr==NULL){
+//        printf("ERROR: Active app thr ptr null, encX count = %d\n", encX_count);
+//        return 5;
+//      }
+
       if(thr_function_ptr==NULL) {
         printf("ERROR: Function ptr is null\n");
         return 5;

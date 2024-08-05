@@ -651,6 +651,7 @@ void* spotifyThread(void *ptr){
   close(data_fd);
   close(cmd_fd);
   printf("Exited spotify thread");
+  return NULL;
 }
 
 
@@ -1192,6 +1193,7 @@ void* baseballThread(void* ptr) {
     usleep(10*1000*1000); // sleep 10s
   }
   printf("Exited baseball thread\n");
+  return NULL;
 }
 
 void* weatherThread(void *ptr){
@@ -1425,4 +1427,5 @@ printf("rAINDROP LOADED IN\n");
     usleep(10*1000*1000);
   }
   printf("Exited weather thread\n");
+  return NULL;
 }
