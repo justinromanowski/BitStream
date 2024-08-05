@@ -200,7 +200,7 @@ using ImageVector = std::vector<Magick::Image>;
 
 const int screen_divider = 44;
 
-pthread_t image_canvas_thr, clock_canvas_thr, spotify_canvas_thr, baseball_canvas_thr, weather_canvas_thr;
+pthread_t gpio_canvas_thr, image_canvas_thr, clock_canvas_thr, spotify_canvas_thr, baseball_canvas_thr, weather_canvas_thr;
 //pthread_mutex_t canvas_mutex;
 
 
@@ -255,7 +255,6 @@ printf("GPIO setup ok\n");
   wiringPiISR(switchpin, INT_EDGE_RISING, &switchInterrupt);
 */
 
-gpioSetup();
 
   // INITIALIZE MATRIX AND IMAGE
   RGBMatrix::Options matrix_options;
@@ -282,6 +281,18 @@ gpioSetup();
   canvas_ptrs.canvas = canvas;
   canvas_ptrs.offscreen_canvas = offscreen_canvas;
   canvas_ptrs.canvas_mutex = &canvas_mutex;
+
+
+  // Let's request all input bits and see which are actually available.
+  // This will differ depending on which hardware mapping you use and how
+  // many parallel chains you have.
+  const uint64_t available_inputs = canvas->RequestInputs(0xffffffff);
+  fprintf(stderr, "Available GPIO-bits: ");
+  for (int b = 0; b < 32; ++b) {
+      if (available_inputs & (1<<b))
+          fprintf(stderr, "%d ", b);
+  }
+  fprintf(stderr, "\n");
 
   // CREATE CLASSES
   void *canvas_void_ptr = (void*)&canvas_ptrs;
@@ -374,6 +385,10 @@ gpioSetup();
     return 2;
   }
 
+  if(pthread_create(&gpio_canvas_thr, NULL, gpioThread, (void*)&canvas_ptrs) != 0) {
+    printf("ERROR in clock thread creation");
+    return 2;
+  }
 
 /*
   if(pthread_create(&image_canvas_thr, NULL, imageThread, (void*)&canvas_ptrs) != 0) {
@@ -403,6 +418,7 @@ gpioSetup();
   // Join the threads to main thread -- don't execute cleanup code
   // until interrupt is received
   void *canvas_ret;
+  void *gpio_ret;
   void *image_ret;
   void *spotify_ret;
   void *baseball_ret;
@@ -412,6 +428,12 @@ gpioSetup();
     printf("ERROR in clock thread joining");
     return 3;
   }
+
+  if(pthread_join(gpio_canvas_thr, &gpio_ret) != 0) {
+    printf("ERROR in spotify thread joining");
+    return 3;
+  }
+
 /*
   if(pthread_join(image_canvas_thr, &image_ret) != 0) {
     printf("ERROR in image thread joining");

@@ -210,17 +210,11 @@ librgbmatrix: display-classes.o #$(RGB_LIBRARY)
 	$(CXX) $< -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
 
 # for canvas gpio
-#canvas_gpio.o : canvas_gpio.cc
-#	$(CXX) -I$(INCDIR) $(CXXFLAGS_M) $(MAGICK_CXXFLAGS) -c -o $@ $<
-
-#librgbmatrix: canvas_gpio.o #$(RGB_LIBRARY)
-#	$(CXX) $< -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
-
 canvas_gpio.o : canvas_gpio.cc
-	$(CXX) -I$(INCDIR) $(CXXFLAGS_M) -c canvas_gpio.cc
+	$(CXX) -I$(INCDIR) $(CXXFLAGS_M) $(MAGICK_CXXFLAGS) -c -o $@ $<
 
 librgbmatrix: canvas_gpio.o #$(RGB_LIBRARY)
-	$(CXX) canvas_gpio.o -o librgbmatrix -lwiringPi
+	$(CXX) $< -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
 
 clean:
 	rm -f $(OBJECTS) $(TARGET).a $(TARGET).so.1

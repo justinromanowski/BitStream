@@ -1,17 +1,22 @@
 #ifndef CANVAS_GPIO_H
 #define CANVAS_GPIO_H
 
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <wiringPi.h>
+
+#include "led-matrix.h"
+
 #include <unistd.h>
+#include <math.h>
+#include <stdio.h>
+#include <signal.h>
+#include <pthread.h>
 
-void rotateInterrupt(void);
+using rgb_matrix::RGBMatrix;
+using rgb_matrix::Canvas;
 
-void switchInterrupt(void);
+#define SW_A_PIN 13
+#define ENCX_A_PIN 26
+#define ENCX_B_PIN 19
 
-void gpioSetup(void);
+void* gpioThread(void *ptr);
 
 #endif

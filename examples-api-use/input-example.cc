@@ -37,7 +37,9 @@ int main(int argc, char *argv[]) {
   // Let's request all input bits and see which are actually available.
   // This will differ depending on which hardware mapping you use and how
   // many parallel chains you have.
-  const uint64_t available_inputs = matrix->RequestInputs(0xffffffff);
+//  const uint64_t available_inputs = matrix->RequestInputs(0xffffffff);
+  const uint64_t available_inputs = matrix->RequestInputs(0x06082000);
+
   fprintf(stderr, "Available GPIO-bits: ");
   for (int b = 0; b < 32; ++b) {
       if (available_inputs & (1<<b))
@@ -52,6 +54,11 @@ int main(int argc, char *argv[]) {
       // Minimal output: let's show the bits with LEDs in the first row
       for (int b = 0; b < 32; ++b) {
           uint8_t col = (inputs & (1<<b)) ? 255 : 0;
+
+          if(b==13 && col==255){
+            printf("Button Pressed\n");
+          }
+
           matrix->SetPixel(32-b, 0, col, col, col);
       }
   }

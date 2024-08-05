@@ -241,11 +241,9 @@ void ClockClass::updateTime() {
   sprintf(date_str, "%.3s %.3s %.2d %d", wday_name[time_ptr->tm_wday], mon_name[time_ptr->tm_mon],
                                          time_ptr->tm_mday, 1900+(time_ptr->tm_year));
 
-  printf("TIME UPDATED\n");
 }
 
 void ClockClass::drawDisplay() {
-  printf("before mutex\n");
 
   pthread_mutex_lock(canvas_mutex);
   printf("CLCOK AT MUTEX\n");

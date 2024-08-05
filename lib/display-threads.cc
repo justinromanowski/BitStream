@@ -470,12 +470,12 @@ void* spotifyThread(void *ptr){
 
 
     //////////////////////////////////////////////////////////// TEST
-    using std::chrono::high_resolution_clock;
-    using std::chrono::duration_cast;
-    using std::chrono::duration;
-    using std::chrono::milliseconds;
+//    using std::chrono::high_resolution_clock;
+//    using std::chrono::duration_cast;
+//    using std::chrono::duration;
+//    using std::chrono::milliseconds;
 
-auto t3 = high_resolution_clock::now();
+//auto t3 = high_resolution_clock::now();
 //////////////////////////////////////////////////////////////////
 
     if((int)usleep_count > cmd_refresh) {
@@ -662,8 +662,7 @@ auto t3 = high_resolution_clock::now();
 
 //    SetCanvasArea(offscreen_canvas, artist_x_orig-2, artist_y_orig, 2, 6, &bg_color);
 
-/////////////////////////////////////////// TESTING
-    auto t1 = high_resolution_clock::now();
+//    auto t1 = high_resolution_clock::now();
 
     if(status_code == 200) {
       // Album cover and spotify logo
@@ -672,15 +671,15 @@ auto t3 = high_resolution_clock::now();
       CopyImageToCanvas(spotify_default[0], offscreen_canvas, &album_cover_x, &album_cover_y);
     }
 
-    auto t2 = high_resolution_clock::now();
+//    auto t2 = high_resolution_clock::now();
 
     /* Getting number of milliseconds as an integer. */
-    auto ms_int = duration_cast<milliseconds>(t2 - t1);
+//    auto ms_int = duration_cast<milliseconds>(t2 - t1);
 
     /* Getting number of milliseconds as a double. */
-    duration<double, std::milli> ms_double = t2 - t1;
+//    duration<double, std::milli> ms_double = t2 - t1;
 
-    printf("%f ms\n", ms_double.count());
+//    printf("%f ms\n", ms_double.count());
 
 /*
     if(status_code == 200) {
@@ -708,14 +707,14 @@ auto t3 = high_resolution_clock::now();
     }
 
 ////////////////////////////////////////////////////////////////// TESTING
-    auto t4 = high_resolution_clock::now();
+  //  auto t4 = high_resolution_clock::now();
     /* Getting number of milliseconds as an integer. */
-    auto ms_int2 = duration_cast<milliseconds>(t4 - t3);
+  //  auto ms_int2 = duration_cast<milliseconds>(t4 - t3);
 
     /* Getting number of milliseconds as a double. */
-    duration<double, std::milli> ms_double2 = t4 - t3;
+  //  duration<double, std::milli> ms_double2 = t4 - t3;
 
-    printf("%f ms\n", ms_double2.count());
+  //  printf("%f ms\n", ms_double2.count());
 //////////////////////////////////////////////////////////////////////////
 
 
