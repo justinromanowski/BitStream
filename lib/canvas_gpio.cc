@@ -12,6 +12,7 @@ volatile int encX_count = 0;
 
 extern volatile bool interrupt_received;
 extern const int number_apps;
+extern volatile bool changing_app;
 
 struct canvas_args{
   RGBMatrix *canvas;
@@ -63,7 +64,8 @@ void* gpioThread(void *ptr){
 
     // Switch
     if(!prev_sw_pressed && sw_pressed) {
-      printf("SWITCH PRESSED\n");
+      printf("SWITCH PRESSED\n------------------------------CHANGING_APP = %d", changing_app);
+      changing_app = !changing_app;
     }
     prev_sw_pressed = sw_pressed;
 

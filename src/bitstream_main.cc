@@ -68,14 +68,17 @@ using rgb_matrix::FrameCanvas;
 #define IMAGE 0
 #define SPOTIFY 1
 #define BASEBALL 2
+#define WEATHER 3
 
+// HOME PAGE VARIAVLES //
+const int number_apps = 4;
+int current_app = 0;
+volatile bool changing_app = true;
 
 //const int outputApin = 25;
 //const int outputBpin = 24;
 //const int switchpin = 23;
 
-
-volatile bool app_change = false;
 
 /*
 int rot_enc_state = IDLE_11;
@@ -158,39 +161,6 @@ int prev_count = 0;
       printf("Switch pressed\n");
     }
 ////////////////////////////////////////////////////////////////////////////
-*/
-
-/*
-int count = 0;
-int prev_A_value = 0;
-
-static void rotateInterrupt(void) {
-  int A_value = digitalRead(outputApin);
-  int B_value = digitalRead(outputBpin);
-
-  printf("A value = %d, B value = %d\n", A_value, B_value);
-  // Analyze direction
-  if(A_value != prev_A_value){
-    if(A_value == B_value) {
-      printf("Counter clockwise rotation\n");
-      count--;
-    } else {
-      printf("Clockwise rotation\n");
-      count++;
-    }
-    prev_A_value = A_value;
-    printf("Count = %d\n", count);
-  } else {printf("ROTARY ENCODER BOUNCING\n");}
-}
-
-static void switchInterrupt(void){
-  int A_value = digitalRead(outputApin);
-  int B_value = digitalRead(outputBpin);
-
-  printf("A value = %d, B value = %d\n", A_value, B_value);
-
-  printf("Switch pressed\n");
-}
 */
 
 
@@ -327,45 +297,6 @@ printf("GPIO setup ok\n");
     canvas->SetPWMBits(1);
 
   fontSetup();
-
-
-  // GPIO Setup
-  //  RotaryEncoder rotary_encoder;
-//printf("trying wiringpi\n");
-//  if(wiringPiSetup() == -1) {
-//    printf("Error setting up wiringPi\n");
-//    return 1;
-//  }
-//  printf("GPIO setup ok\n");
-
-  //RotaryEncoder rotary_encoder;
-
-/*
-  // GPIO Pin Initialization
-      pinMode(outputApin, INPUT);
-      pinMode(outputBpin, INPUT);
-      pinMode(switchpin, INPUT);
-
-      // Set input as pullup
-      pullUpDnControl(outputApin, PUD_UP);
-      pullUpDnControl(outputBpin, PUD_UP);
-      pullUpDnControl(switchpin, PUD_UP);
-
-      wiringPiISR(outputApin, INT_EDGE_BOTH, &rotateInterrupt);
-      wiringPiISR(outputBpin, INT_EDGE_BOTH, &rotateInterrupt);
-      wiringPiISR(switchpin, INT_EDGE_RISING, &switchInterrupt);
-*/
-      // ROT END
-     // rot_enc_state = IDLE_11;
-     // count = 0;
-     // prev_count = 0;
-      app_change = false;
-
-
-  // INTERRUPT INITIALIZATION
-  //wiringPiISR(outputApin, INT_EDGE_BOTH, rotateInterrupt);
-  //wiringPiISR(outputBpin, INT_EDGE_BOTH, rotateInterrupt);
-  //wiringPiISR(switchpin, INT_EDGE_RISING, switchInterrupt);
 
   // INITIALIZE MUTEX
   if (pthread_mutex_init(&canvas_mutex, NULL) != 0) {
