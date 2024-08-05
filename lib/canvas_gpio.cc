@@ -11,6 +11,7 @@ using rgb_matrix::FrameCanvas;
 volatile int encX_count = 0;
 
 extern volatile bool interrupt_received;
+extern const int number_apps;
 
 struct canvas_args{
   RGBMatrix *canvas;
@@ -26,7 +27,6 @@ void* gpioThread(void *ptr){
   FrameCanvas *offscreen_canvas = canvas_ptrs->offscreen_canvas;
   pthread_mutex_t *canvas_mutex = canvas_ptrs->canvas_mutex;
 
-  const int number_apps = 5;
 
   bool prev_encX_a = 0;
   bool prev_sw_pressed = 0;
