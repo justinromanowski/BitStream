@@ -233,7 +233,7 @@ void fontSetup() {
 // ---------------------------------------------------------------------------
 
 void* clockThread(void* ptr){
-  printf("Entered clock thread");
+  printf("Entered clock thread\n");
   ClockClass *Clock = (ClockClass*)ptr;
 
   while(!interrupt_received){
@@ -241,91 +241,8 @@ void* clockThread(void* ptr){
     Clock->drawDisplay();
     usleep(200*1000);
   }
+  printf("Exited clock thread\n");
 }
-
-/*
-void* clockThread(void *ptr){
-
-  printf("entered clock thread");
-
-  struct canvas_args *canvas_ptrs = (struct canvas_args*)ptr;
-  RGBMatrix *canvas = canvas_ptrs->canvas;
-  FrameCanvas *offscreen_canvas = canvas_ptrs->offscreen_canvas;
-  pthread_mutex_t canvas_mutex = canvas_ptrs->canvas_mutex;
-
-  // INITIALIZE CLOCK VARIABLES
-  static const char wday_name[][4] = {
-    "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
-  };
-  static const char mon_name[][4] = {
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-  };
-
-  // Related to time.h struct
-  struct tm* time_ptr;
-  time_t t;
-
-  // Configure colors for text
-  rgb_matrix::Color color(180, 90, 0); // text color
-  rgb_matrix::Color bg_color(0, 0, 0);
-  rgb_matrix::Color flood_color(0, 0, 0);
-  rgb_matrix::Color outline_color(0,0,0);
-  bool with_outline = false;
-
-  // Positions for the time on the canvas
-  int time_x = 0;
-  int time_y = 52;
-
-  int date_x = 0;
-  int date_y = 47;
-
-  int sec_x = 42;
-  int sec_y = 54;
-
-  char time_str[1024];
-  char sec_str[1024];
-  char date_str[1024];
-
-  int letter_spacing = 0;
-
-  // PUT TIME ONTO CANVAS
-  // PUT TIME ONTO CANVAS
-  while(!interrupt_received) {
-    // Get current time
-    t = time(NULL);
-    time_ptr = localtime(&t);
-
-    // Update char arrays w/ new data
-    sprintf(time_str, "%.2d:%.2d:", time_ptr->tm_hour, time_ptr->tm_min);
-    sprintf(sec_str, "%.2d AM", time_ptr->tm_sec);
-    sprintf(date_str, "%.3s %.3s %.2d %d", wday_name[time_ptr->tm_wday], mon_name[time_ptr->tm_mon],
-                                           time_ptr->tm_mday, 1900+(time_ptr->tm_year));
-
-    pthread_mutex_lock(&canvas_mutex);
-    printf("Clock at MUTEX\n");
-   // Update the time to the display
-    rgb_matrix::DrawText(offscreen_canvas, time_font, time_x, time_y + time_font.baseline(),
-                         color, outline_font ? NULL : &bg_color, time_str,
-                         letter_spacing);
-
-    rgb_matrix::DrawText(offscreen_canvas, date_font, date_x, date_y + date_font.baseline(),
-                         color, outline_font ? NULL : &bg_color, date_str,
-                         letter_spacing);
-
-    rgb_matrix::DrawText(offscreen_canvas, date_font, sec_x, sec_y + date_font.baseline(),
-                         color, outline_font ? NULL : &bg_color, sec_str,
-                         letter_spacing);
-
-    //offscreen_canvas = canvas->SwapOnVSync(offscreen_canvas);
-    canvas->SwapOnVSync(offscreen_canvas);
-
-    pthread_mutex_unlock(&canvas_mutex);
-    usleep(200*1000);
-  }
-  printf("Exited clock thread");
-}
-*/
 
   // -------------------------------------------------------------------------
   // Thread for the image generation on the display, displays the image on the
@@ -348,7 +265,7 @@ void* imageThread(void *ptr){
   int image_display_count = 0;
   int still_image_sleep = 1000000;
 
-  while(!interrupt_received) {
+  while(!interrupt_received && !changing_app) {
 
     // PUT IMAGE ONTO CANVAS
     pthread_mutex_lock(canvas_mutex);
@@ -459,7 +376,7 @@ void* spotifyThread(void *ptr){
   int status_code = 0;
 
   // BEFORE DRAWING TEXT
-  while(!interrupt_received){
+  while(!interrupt_received && !changing_app){
 
     // TWO COUNTS RUNNING: one for scrolling text (200ms)
     // one for sending API requests (3s)
@@ -899,7 +816,7 @@ void* baseballThread(void* ptr) {
   char cmd_tx[64] = "mlb";
   char data_rx[1024];
 
-  while(!interrupt_received) {
+  while(!interrupt_received && !changing_app) {
     pthread_mutex_lock(canvas_mutex);
     printf("BASEBALL AT MUTEX\n");
 
@@ -1460,7 +1377,7 @@ printf("rAINDROP LOADED IN\n");
   }
 
 
-  while(!interrupt_received){
+  while(!interrupt_received && !changing_app){
     printf("WEAHTER AT MUTEX\n");
     std::string bg_img_path = weather_img_path + "background-1.png";
     //std::string bg_img_fn = weather_img_path + "background-" + curr_img_number + ".png";
@@ -1481,7 +1398,6 @@ printf("rAINDROP LOADED IN\n");
                                         small_img_size,
                                         small_img_size);
 
-printf("IMG ALL LOADED\n");
 
     pthread_mutex_lock(canvas_mutex);
 
@@ -1508,5 +1424,5 @@ printf("IMG ALL LOADED\n");
     pthread_mutex_unlock(canvas_mutex);
     usleep(10*1000*1000);
   }
-
+  printf("Exited weather thread\n");
 }

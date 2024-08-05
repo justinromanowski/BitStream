@@ -10,10 +10,6 @@ using rgb_matrix::FrameCanvas;
 
 volatile int encX_count = 0;
 
-extern volatile bool interrupt_received;
-extern const int number_apps;
-extern volatile bool changing_app;
-
 struct canvas_args{
   RGBMatrix *canvas;
   FrameCanvas *offscreen_canvas;
@@ -53,22 +49,21 @@ void* gpioThread(void *ptr){
     if(encX_a != prev_encX_a) {
       if(encX_a == encX_b) {
         printf("COUNTER CLOCKWISE ROTATION - A: %d, B: %d\n", encX_a, encX_b);
-        encX_count = (0 < encX_count) ? --encX_count : encX_count;
+        encX_count = (0 < encX_count) && changing_app ? --encX_count : encX_count;
       } else {
         printf("CLOCKWISE ROTATION - A: %d, B: %d\n", encX_a, encX_b);
-        encX_count = (encX_count < number_apps) ? ++encX_count : encX_count;
+        encX_count = (encX_count < number_apps) && changing_app ? ++encX_count : encX_count;
       }
       printf("Count = %d\n", encX_count);
     }
     prev_encX_a = encX_a;
 
     // Switch
-    if(!prev_sw_pressed && sw_pressed) {
-      printf("SWITCH PRESSED\n------------------------------CHANGING_APP = %d", changing_app);
+    if(prev_sw_pressed==0 && sw_pressed==1) {
       changing_app = !changing_app;
+printf("SWITCH PRESSED\n------------------------------CHANGING_APP = %d", changing_app);
     }
     prev_sw_pressed = sw_pressed;
-
   }
 }
 /*

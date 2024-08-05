@@ -75,11 +75,6 @@ const int number_apps = 4;
 int current_app = 0;
 volatile bool changing_app = true;
 
-//const int outputApin = 25;
-//const int outputBpin = 24;
-//const int switchpin = 23;
-
-
 extern volatile int encX_count;
 
 /*
@@ -174,7 +169,7 @@ const int screen_divider = 44;
 
 pthread_t gpio_canvas_thr, image_canvas_thr, clock_canvas_thr, spotify_canvas_thr, baseball_canvas_thr, weather_canvas_thr;
 //pthread_mutex_t canvas_mutex;
-
+pthread_t app_thr;
 
 // FUNCTION SETUP - INTERRUPTS -----------------------------------------------
 // ---------------------------------------------------------------------------
@@ -308,12 +303,11 @@ printf("%d\n", encX_count);
   }
 
 
-  // CREATE THREADS
-//  if(pthread_create(&clock_canvas_thr, NULL, clockThread, (void*)&canvas_ptrs) != 0) {
-//    printf("ERROR in clock thread creation");
-//    return 2;
-//  }
+//////////////////////////////////////
+// STATE MACHINE //
+//////////////////////////////////////
 
+  // Create threads that don't need state machine
   if(pthread_create(&clock_canvas_thr, NULL, clockThread, (void*)Clock) != 0) {
     printf("ERROR in clock thread creation");
     return 2;
@@ -324,33 +318,89 @@ printf("%d\n", encX_count);
     return 2;
   }
 
-/*
-  if(pthread_create(&image_canvas_thr, NULL, imageThread, (void*)&canvas_ptrs) != 0) {
-    printf("ERROR in image thread creation");
-   return 2;
-  }
-*/
+  // Pointer for the current active thread
+//  pthread_t* active_app_thr_ptr = &image_canvas_thr;
+//  if(active_app_thr_ptr==NULL){
+//    printf("ERROR: app thr ptr is null\n");
+//    return 5;
+//  }
 
-  if(pthread_create(&spotify_canvas_thr, NULL, spotifyThread, (void*)&canvas_ptrs) != 0) {
-    printf("ERROR in spotify thread creation");
-    return 2;
+  void* (*thr_function_ptr) (void*) = &imageThread;
+  if(thr_function_ptr==NULL) {
+    printf("ERROR: Function ptr is null\n");
+    return 5;
   }
 
-/*
-  if(pthread_create(&baseball_canvas_thr, NULL, baseballThread, (void*)&canvas_ptrs) != 0) {
-    printf("ERROR in baseball thread creation");
-    return 2;
-  }
-*/
-/*
-  if(pthread_create(&weather_canvas_thr, NULL, weatherThread, (void*)&canvas_ptrs) != 0) {
-    printf("ERROR in weather thread creation");
-    return 2;
-  }
-*/
-  // JOIN THREADS TOGETHER
-  // Join the threads to main thread -- don't execute cleanup code
-  // until interrupt is received
+  while(!interrupt_received) {
+    int prev_encX_count = encX_count;
+
+    // Check if app_change is active
+    while(changing_app) {
+printf("CHANING APP\n");
+      // Clear app portion of canvas
+      SetCanvasArea(offscreen_canvas, 0,0,64,44, &bg_color);
+
+      // Update the active app when rotary encoder is turned
+
+      if(prev_encX_count != encX_count){
+        // Redraw the display here
+printf("NEW APP SELECTED - %d\n", encX_count);
+      }
+      prev_encX_count = encX_count;
+
+      usleep(50*1000); //50ms
+
+    } // while changing_app
+
+    switch(encX_count){
+      case 0:
+//        active_app_thr_ptr = &image_canvas_thr;
+        thr_function_ptr = &imageThread;
+        break;
+      case 1:
+//        active_app_thr_ptr = &spotify_canvas_thr;
+        thr_function_ptr = &spotifyThread;
+        break;
+      case 2:
+//       active_app_thr_ptr = &baseball_canvas_thr;
+        thr_function_ptr = &baseballThread;
+        break;
+      case 3:
+//        active_app_thr_ptr = &weather_canvas_thr;
+        thr_function_ptr = &weatherThread;
+        break;
+      default:
+//        active_app_thr_ptr = &image_canvas_thr;
+        thr_function_ptr = &imageThread;
+        break;
+
+    }
+
+      if(active_app_thr_ptr==NULL){
+        printf("ERROR: Active app thr ptr null, encX count = %d\n", encX_count);
+        return 5;
+      }
+      if(thr_function_ptr==NULL) {
+        printf("ERROR: Function ptr is null\n");
+        return 5;
+      }
+
+      // Create thread, and join it
+      if(pthread_create(&app_thr, NULL, *thr_function_ptr, (void*)&canvas_ptrs) != 0) {
+        printf("ERROR in clock thread creation");
+        return 2;
+      }
+
+printf("Waiting to join thread..\n");
+      if(pthread_join(app_thr, NULL) != 0) {
+        printf("ERROR in thread joining");
+        return 3;
+      }
+
+printf("THREAD JOINED SUCCESSFULLY\n");
+
+  } // while !intr_rec
+
   void *canvas_ret;
   void *gpio_ret;
   void *image_ret;
@@ -368,18 +418,80 @@ printf("%d\n", encX_count);
     return 3;
   }
 
+
+  // CREATE THREADS
+/*
+  if(pthread_create(&clock_canvas_thr, NULL, clockThread, (void*)Clock) != 0) {
+    printf("ERROR in clock thread creation");
+    return 2;
+  }
+*/
+/*
+  if(pthread_create(&gpio_canvas_thr, NULL, gpioThread, (void*)&canvas_ptrs) != 0) {
+    printf("ERROR in clock thread creation");
+    return 2;
+  }
+*/
+/*
+  if(pthread_create(&image_canvas_thr, NULL, imageThread, (void*)&canvas_ptrs) != 0) {
+    printf("ERROR in image thread creation");
+   return 2;
+  }
+*/
+/*
+  if(pthread_create(&spotify_canvas_thr, NULL, spotifyThread, (void*)&canvas_ptrs) != 0) {
+    printf("ERROR in spotify thread creation");
+    return 2;
+  }
+*/
+/*
+  if(pthread_create(&baseball_canvas_thr, NULL, baseballThread, (void*)&canvas_ptrs) != 0) {
+    printf("ERROR in baseball thread creation");
+    return 2;
+  }
+*/
+/*
+  if(pthread_create(&weather_canvas_thr, NULL, weatherThread, (void*)&canvas_ptrs) != 0) {
+    printf("ERROR in weather thread creation");
+    return 2;
+  }
+*/
+  // JOIN THREADS TOGETHER
+  // Join the threads to main thread -- don't execute cleanup code
+  // until interrupt is received
+/*
+  void *canvas_ret;
+  void *gpio_ret;
+  void *image_ret;
+  void *spotify_ret;
+  void *baseball_ret;
+  void *weather_ret;
+*/
+
+/*
+  if(pthread_join(clock_canvas_thr, &canvas_ret) != 0) {
+    printf("ERROR in clock thread joining");
+    return 3;
+  }
+*/
+/*
+  if(pthread_join(gpio_canvas_thr, &gpio_ret) != 0) {
+    printf("ERROR in spotify thread joining");
+    return 3;
+  }
+*/
 /*
   if(pthread_join(image_canvas_thr, &image_ret) != 0) {
     printf("ERROR in image thread joining");
     return 3;
   }
 */
-
+/*
   if(pthread_join(spotify_canvas_thr, &spotify_ret) != 0) {
     printf("ERROR in spotify thread joining");
     return 3;
   }
-
+*/
 /*
   if(pthread_join(baseball_canvas_thr, &baseball_ret) != 0) {
     printf("ERROR in baseball thread joining");

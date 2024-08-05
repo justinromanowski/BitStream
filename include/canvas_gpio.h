@@ -13,6 +13,10 @@
 using rgb_matrix::RGBMatrix;
 using rgb_matrix::Canvas;
 
+extern volatile bool interrupt_received;
+extern const int number_apps;
+extern volatile bool changing_app;
+
 #define SW_A_PIN 13
 #define ENCX_A_PIN 26
 #define ENCX_B_PIN 19

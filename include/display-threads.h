@@ -32,6 +32,9 @@ using rgb_matrix::RGBMatrix;
 using rgb_matrix::FrameCanvas;
 using ImageVector = std::vector<Magick::Image>;
 
+extern volatile bool interrupt_received;
+extern volatile bool changing_app;
+
 /*
 struct canvas_args{
   RGBMatrix *canvas;

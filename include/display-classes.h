@@ -37,6 +37,23 @@
 
   extern void fontSetup();
 
+  extern ImageVector LoadImageAndScaleImage(const char *filename,
+                                     int target_width,
+                                     int target_height);
+
+  extern void CopyImageToCanvas(const Magick::Image &image, Canvas *canvas,
+                         const int *x_pos, const int *y_pos);
+
+  extern void CopyImageToCanvasTransparent(const Magick::Image &image, Canvas *canvas,
+                                    const int *x_pos, const int *y_pos);
+
+  extern void ShowAnimatedImage(const Magick::Image &image, RGBMatrix *canvas,
+                         const int *x_pos, const int *y_pos,
+                         FrameCanvas *offscreen_canvas);
+
+
+  extern void SetCanvasArea(FrameCanvas *offscreen_canvas, int x, int y,
+                            int width, int height, rgb_matrix::Color *color);
 
 /////////////////////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES  //
