@@ -119,6 +119,7 @@ void ShowAnimatedImage(const Magick::Image &image, RGBMatrix *canvas,
 }
 
 
+<<<<<<< HEAD
 static bool FullSaturation(const rgb_matrix::Color &c) {
   return (c.r == 0 || c.r == 255)
     && (c.g == 0 || c.g == 255)
@@ -126,6 +127,8 @@ static bool FullSaturation(const rgb_matrix::Color &c) {
 }
 
 
+=======
+>>>>>>> 29607a148eb480dd907f6284f9464c03d66915bb
 void SetCanvasArea(FrameCanvas *offscreen_canvas, int x, int y,
                      int width, int height, rgb_matrix::Color *color) {
   for (int iy = 0; iy < height; ++iy) {
@@ -136,6 +139,16 @@ void SetCanvasArea(FrameCanvas *offscreen_canvas, int x, int y,
 }
 
 
+<<<<<<< HEAD
+=======
+bool FullSaturation(const rgb_matrix::Color &c) {
+  return (c.r == 0 || c.r == 255)
+    && (c.g == 0 || c.g == 255)
+    && (c.b == 0 || c.b == 255);
+}
+
+
+>>>>>>> 29607a148eb480dd907f6284f9464c03d66915bb
 void fontSetup() {
   // INITIALIZE FONT PTRS
   const char *seven_fourteen_ptr = NULL;
@@ -250,9 +263,12 @@ void ClockClass::drawDisplay() {
 
   SetCanvasArea(offscreen_canvas, 0, 45, 64, (64-45), &bg_color);
 
+<<<<<<< HEAD
 }
 
 void ClockClass::drawDisplay() {
+=======
+>>>>>>> 29607a148eb480dd907f6284f9464c03d66915bb
   // Draw the updated time onto the display
   rgb_matrix::DrawText(offscreen_canvas, seven_fourteen_font, time_x, time_y + seven_fourteen_font.baseline(),
                        color, NULL, time_str,

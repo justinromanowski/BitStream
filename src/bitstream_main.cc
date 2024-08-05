@@ -80,6 +80,11 @@ volatile bool changing_app = true;
 //const int switchpin = 23;
 
 
+<<<<<<< HEAD
+=======
+extern volatile int encX_count;
+
+>>>>>>> 29607a148eb480dd907f6284f9464c03d66915bb
 /*
 int rot_enc_state = IDLE_11;
 int count = 0;
@@ -184,11 +189,11 @@ static void InterruptHandler(int signo) {
   interrupt_received = true;
 }
 
-//static bool FullSaturation(const rgb_matrix::Color &c) {
-//  return (c.r == 0 || c.r == 255)
-//    && (c.g == 0 || c.g == 255)
-//    && (c.b == 0 || c.b == 255);
-//}
+static bool FullSaturation(const rgb_matrix::Color &c) {
+  return (c.r == 0 || c.r == 255)
+    && (c.g == 0 || c.g == 255)
+    && (c.b == 0 || c.b == 255);
+}
 
 // MAIN FUNCTION -------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -225,6 +230,7 @@ printf("GPIO setup ok\n");
   wiringPiISR(switchpin, INT_EDGE_RISING, &switchInterrupt);
 */
 
+printf("%d\n", encX_count);
 
   // INITIALIZE MATRIX AND IMAGE
   RGBMatrix::Options matrix_options;
@@ -298,6 +304,47 @@ printf("GPIO setup ok\n");
 
   fontSetup();
 
+<<<<<<< HEAD
+=======
+
+  // GPIO Setup
+  //  RotaryEncoder rotary_encoder;
+//printf("trying wiringpi\n");
+//  if(wiringPiSetup() == -1) {
+//    printf("Error setting up wiringPi\n");
+//    return 1;
+//  }
+//  printf("GPIO setup ok\n");
+
+  //RotaryEncoder rotary_encoder;
+
+/*
+  // GPIO Pin Initialization
+      pinMode(outputApin, INPUT);
+      pinMode(outputBpin, INPUT);
+      pinMode(switchpin, INPUT);
+
+      // Set input as pullup
+      pullUpDnControl(outputApin, PUD_UP);
+      pullUpDnControl(outputBpin, PUD_UP);
+      pullUpDnControl(switchpin, PUD_UP);
+
+      wiringPiISR(outputApin, INT_EDGE_BOTH, &rotateInterrupt);
+      wiringPiISR(outputBpin, INT_EDGE_BOTH, &rotateInterrupt);
+      wiringPiISR(switchpin, INT_EDGE_RISING, &switchInterrupt);
+*/
+      // ROT END
+     // rot_enc_state = IDLE_11;
+     // count = 0;
+     // prev_count = 0;
+
+
+  // INTERRUPT INITIALIZATION
+  //wiringPiISR(outputApin, INT_EDGE_BOTH, rotateInterrupt);
+  //wiringPiISR(outputBpin, INT_EDGE_BOTH, rotateInterrupt);
+  //wiringPiISR(switchpin, INT_EDGE_RISING, switchInterrupt);
+
+>>>>>>> 29607a148eb480dd907f6284f9464c03d66915bb
   // INITIALIZE MUTEX
   if (pthread_mutex_init(&canvas_mutex, NULL) != 0) {
         printf("Canvas Mutex INIT failed\n");
