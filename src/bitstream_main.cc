@@ -75,7 +75,7 @@ using rgb_matrix::FrameCanvas;
 //const int switchpin = 23;
 
 
-volatile bool app_change = false;
+extern volatile int encX_count;
 
 /*
 int rot_enc_state = IDLE_11;
@@ -214,11 +214,11 @@ static void InterruptHandler(int signo) {
   interrupt_received = true;
 }
 
-//static bool FullSaturation(const rgb_matrix::Color &c) {
-//  return (c.r == 0 || c.r == 255)
-//    && (c.g == 0 || c.g == 255)
-//    && (c.b == 0 || c.b == 255);
-//}
+static bool FullSaturation(const rgb_matrix::Color &c) {
+  return (c.r == 0 || c.r == 255)
+    && (c.g == 0 || c.g == 255)
+    && (c.b == 0 || c.b == 255);
+}
 
 // MAIN FUNCTION -------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -255,6 +255,7 @@ printf("GPIO setup ok\n");
   wiringPiISR(switchpin, INT_EDGE_RISING, &switchInterrupt);
 */
 
+printf("%d\n", encX_count);
 
   // INITIALIZE MATRIX AND IMAGE
   RGBMatrix::Options matrix_options;
@@ -359,7 +360,6 @@ printf("GPIO setup ok\n");
      // rot_enc_state = IDLE_11;
      // count = 0;
      // prev_count = 0;
-      app_change = false;
 
 
   // INTERRUPT INITIALIZATION
