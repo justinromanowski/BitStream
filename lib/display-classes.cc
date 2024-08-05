@@ -18,16 +18,20 @@ using ImageVector = std::vector<Magick::Image>;
 
 extern volatile bool interrupt_received;
 
+<<<<<<< HEAD
 rgb_matrix::Font seven_fourteen_font;
 rgb_matrix::Font four_six_font;
 rgb_matrix::Font five_seven_font;
 rgb_matrix::Font six_ten_font;
 rgb_matrix::Font eight_thirteen_font;
 
+=======
+>>>>>>> dd2df64942b046e817853a15e3e2f7a11054ec14
 /////////////////////////////////////////////////////////////////////////////
 // FUNCTIONS //
 /////////////////////////////////////////////////////////////////////////////
 
+<<<<<<< HEAD
 ImageVector LoadImageAndScaleImage(const char *filename,
                                    int target_width,
                                    int target_height) {
@@ -35,6 +39,14 @@ ImageVector LoadImageAndScaleImage(const char *filename,
   // If this is an animated image, the resutlting vector will contain multiple.
 
   //Magick::InitializeMagick(NULL);
+=======
+static ImageVector LoadImageAndScaleImage(const char *filename,
+                                          int target_width,
+                                          int target_height) {
+  // Given the filename, load the image and scale to the size of the matrix.
+  // If this is an animated image, the resutlting vector will contain multiple.
+
+>>>>>>> dd2df64942b046e817853a15e3e2f7a11054ec14
   ImageVector result;
 
   ImageVector frames;
@@ -119,6 +131,16 @@ void ShowAnimatedImage(const Magick::Image &image, RGBMatrix *canvas,
 }
 
 
+<<<<<<< HEAD
+=======
+static bool FullSaturation(const rgb_matrix::Color &c) {
+  return (c.r == 0 || c.r == 255)
+    && (c.g == 0 || c.g == 255)
+    && (c.b == 0 || c.b == 255);
+}
+
+
+>>>>>>> dd2df64942b046e817853a15e3e2f7a11054ec14
 void SetCanvasArea(FrameCanvas *offscreen_canvas, int x, int y,
                      int width, int height, rgb_matrix::Color *color) {
   for (int iy = 0; iy < height; ++iy) {
@@ -129,6 +151,7 @@ void SetCanvasArea(FrameCanvas *offscreen_canvas, int x, int y,
 }
 
 
+<<<<<<< HEAD
 bool FullSaturation(const rgb_matrix::Color &c) {
   return (c.r == 0 || c.r == 255)
     && (c.g == 0 || c.g == 255)
@@ -136,6 +159,8 @@ bool FullSaturation(const rgb_matrix::Color &c) {
 }
 
 
+=======
+>>>>>>> dd2df64942b046e817853a15e3e2f7a11054ec14
 void fontSetup() {
   // INITIALIZE FONT PTRS
   const char *seven_fourteen_ptr = NULL;
@@ -206,6 +231,7 @@ void fontSetup() {
 
 ClockClass::ClockClass(void *ptr) {
   // Load in the necessary pointers and objects
+<<<<<<< HEAD
   if(ptr==NULL) {
     printf("ERROR: NULL POINTER");
   }
@@ -215,6 +241,13 @@ ClockClass::ClockClass(void *ptr) {
   canvas = canvas_ptrs->canvas;
   offscreen_canvas = canvas_ptrs->offscreen_canvas;
   canvas_mutex = canvas_ptrs->canvas_mutex;
+=======
+  canvas_args *canvas_ptrs = (struct canvas_args*)ptr;
+
+  canvas = canvas_ptrs->canvas;
+  FrameCanvas *offscreen_canvas = canvas_ptrs->offscreen_canvas;
+  pthread_mutex_t canvas_mutex = canvas_ptrs->canvas_mutex;
+>>>>>>> dd2df64942b046e817853a15e3e2f7a11054ec14
 
   printf("Clock Class initialized");
 }
@@ -240,6 +273,7 @@ void ClockClass::updateTime() {
   sprintf(sec_str, "%.2d AM", time_ptr->tm_sec);
   sprintf(date_str, "%.3s %.3s %.2d %d", wday_name[time_ptr->tm_wday], mon_name[time_ptr->tm_mon],
                                          time_ptr->tm_mday, 1900+(time_ptr->tm_year));
+<<<<<<< HEAD
 
 }
 
@@ -250,6 +284,12 @@ void ClockClass::drawDisplay() {
 
   SetCanvasArea(offscreen_canvas, 0, 45, 64, (64-45), &bg_color);
 
+=======
+}
+
+void ClockClass::drawDisplay() {
+  pthread_mutex_lock(&canvas_mutex);
+>>>>>>> dd2df64942b046e817853a15e3e2f7a11054ec14
   // Draw the updated time onto the display
   rgb_matrix::DrawText(offscreen_canvas, seven_fourteen_font, time_x, time_y + seven_fourteen_font.baseline(),
                        color, NULL, time_str,
@@ -266,5 +306,9 @@ void ClockClass::drawDisplay() {
   //offscreen_canvas = canvas->SwapOnVSync(offscreen_canvas);
   canvas->SwapOnVSync(offscreen_canvas);
 
+<<<<<<< HEAD
   pthread_mutex_unlock(canvas_mutex);
+=======
+  pthread_mutex_unlock(&canvas_mutex);
+>>>>>>> dd2df64942b046e817853a15e3e2f7a11054ec14
 }
