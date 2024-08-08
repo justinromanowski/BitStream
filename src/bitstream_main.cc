@@ -47,22 +47,6 @@ using rgb_matrix::Canvas;
 using rgb_matrix::RGBMatrix;
 using rgb_matrix::FrameCanvas;
 
-/*
-// ROTARY ENCODER /////////////////////////////////////////////////////////////
-// STATE MACHINE VARIABLES - ROTARY ENCODER
-// A_AB means that A had a falling edge first
-// B_AB means that B had a rising edge first
-// FSM can go IDLE -> A_01 -> A_00 -> A_10 -> IDLE
-// or IDLE -> B_10 -> B_00 -> B_01 -> IDLE, when a full
-// loop back to IDLE is completed then the count is incremented
-#define IDLE_11 0
-#define A_01 1
-#define A_00 2
-#define A_10 3
-#define B_10 4
-#define B_00 5
-#define B_01 6
-*/
 
 // STATE MACHINE VARIABLES - APPS
 #define IMAGE 0
@@ -76,89 +60,6 @@ int current_app = 0;
 volatile bool changing_app = true;
 
 extern volatile int encX_count;
-
-/*
-int rot_enc_state = IDLE_11;
-int count = 0;
-int prev_count = 0;
-
-    void rotateInterrupt(void) {
-      int A_value = digitalRead(outputApin);
-      int B_value = digitalRead(outputBpin);
-      printf("A value = %d\n", A_value);
-
-      switch(rot_enc_state) {
-        case IDLE_11:
-          if(!A_value) {
-            rot_enc_state = A_01;
-          } else if(!B_value) {
-            rot_enc_state = A_10;
-          }
-          break;
-        case A_01:
-          if(A_value) {
-            rot_enc_state = IDLE_11;
-          } else if(!B_value) {
-            rot_enc_state = A_00;
-          }
-          break;
-        case A_00:
-          if(B_value) {
-            rot_enc_state = A_01;
-          } else if(A_value) {
-            rot_enc_state = A_10;
-          }
-          break;
-        case A_10:
-          if(!A_value) {
-            rot_enc_state = A_00;
-          } else if(B_value) {
-            rot_enc_state = IDLE_11;
-            count++;
-          }
-          break;
-        case B_10:
-          if(B_value) {
-            rot_enc_state = IDLE_11;
-          } else if(!A_value) {
-            rot_enc_state = B_00;
-          }
-          break;
-        case B_00:
-          if(A_value) {
-            rot_enc_state = B_10;
-          } else if(B_value) {
-            rot_enc_state = B_01;
-          }
-          break;
-        case B_01:
-          if(!B_value) {
-            rot_enc_state = B_00;
-          } else if(A_value) {
-            rot_enc_state = IDLE_11;
-            count--;
-          }
-          break;
-        }
-
-      if(count != prev_count) {
-        // Change the app that is displayed on the screen to select
-        printf("Count = %d", count);
-        prev_count = count;
-      }
-    }
-    void switchInterrupt(void){
-      // When the switch is pressed down, it will toggle
-      // app selection for the user to change the app
-
-      int A_value = digitalRead(outputApin);
-      int B_value = digitalRead(outputBpin);
-
-      app_change = !app_change;
-      printf("Switch pressed\n");
-    }
-////////////////////////////////////////////////////////////////////////////
-*/
 
 
 // GLOBAL VARIABLE DECLARATIONS ----------------------------------------------
@@ -250,6 +151,15 @@ printf("%d\n", encX_count);
   canvas_ptrs.offscreen_canvas = offscreen_canvas;
   canvas_ptrs.canvas_mutex = &canvas_mutex;
 
+  // IMAGES CREATED
+//  const char* bitstream_logo_fp = "images/bitstream_3.png";
+//  ImageVector bitstream_logo = LoadImageAndScaleImage(bitstream_logo_fp,
+//                                                       60,
+//                                                       20);
+
+//  const int logo_x = 2;
+//  const int logo_y = 5;
+
 
   // Let's request all input bits and see which are actually available.
   // This will differ depending on which hardware mapping you use and how
@@ -271,6 +181,8 @@ printf("%d\n", encX_count);
 
   ClockClass clock((void*)&canvas_ptrs);
   ClockClass *Clock = &clock;
+
+  HomePageClass homepage((void*)&canvas_ptrs);
 
   // INITIALIZE INTERRUPTS
   signal(SIGTERM, InterruptHandler);
@@ -318,13 +230,6 @@ printf("%d\n", encX_count);
     return 2;
   }
 
-  // Pointer for the current active thread
-//  pthread_t* active_app_thr_ptr = &image_canvas_thr;
-//  if(active_app_thr_ptr==NULL){
-//    printf("ERROR: app thr ptr is null\n");
-//    return 5;
-//  }
-
   void* (*thr_function_ptr) (void*) = &imageThread;
   if(thr_function_ptr==NULL) {
     printf("ERROR: Function ptr is null\n");
@@ -336,50 +241,50 @@ printf("%d\n", encX_count);
 
     // Check if app_change is active
     while(changing_app) {
-printf("CHANING APP\n");
-      // Clear app portion of canvas
-      SetCanvasArea(offscreen_canvas, 0,0,64,44, &bg_color);
 
-      // Update the active app when rotary encoder is turned
+      pthread_mutex_lock(canvas_ptrs.canvas_mutex);
+
+      homepage.clearDisplay();
+      homepage.drawBitStreamLogo();
+      homepage.drawBits();
+
+      canvas->SwapOnVSync(offscreen_canvas);
+      pthread_mutex_unlock(canvas_ptrs.canvas_mutex);
 
       if(prev_encX_count != encX_count){
         // Redraw the display here
-printf("NEW APP SELECTED - %d\n", encX_count);
+        printf("NEW APP SELECTED - %d\n", encX_count);
       }
       prev_encX_count = encX_count;
 
-      usleep(50*1000); //50ms
+      usleep(10*1000); //50ms
 
     } // while changing_app
 
+    pthread_mutex_lock(canvas_ptrs.canvas_mutex);
+    SetCanvasArea(offscreen_canvas, 0,0,64,44, &bg_color);
+    pthread_mutex_unlock(canvas_ptrs.canvas_mutex);
+
+
     switch(encX_count){
       case 0:
-//        active_app_thr_ptr = &image_canvas_thr;
         thr_function_ptr = &imageThread;
         break;
       case 1:
-//        active_app_thr_ptr = &spotify_canvas_thr;
         thr_function_ptr = &spotifyThread;
         break;
       case 2:
-//       active_app_thr_ptr = &baseball_canvas_thr;
         thr_function_ptr = &baseballThread;
         break;
       case 3:
-//        active_app_thr_ptr = &weather_canvas_thr;
         thr_function_ptr = &weatherThread;
         break;
       default:
-//        active_app_thr_ptr = &image_canvas_thr;
         thr_function_ptr = &imageThread;
         break;
 
     }
 
-//      if(active_app_thr_ptr==NULL){
-//        printf("ERROR: Active app thr ptr null, encX count = %d\n", encX_count);
-//        return 5;
-//      }
 
       if(thr_function_ptr==NULL) {
         printf("ERROR: Function ptr is null\n");
@@ -392,127 +297,33 @@ printf("NEW APP SELECTED - %d\n", encX_count);
         return 2;
       }
 
-printf("Waiting to join thread..\n");
       if(pthread_join(app_thr, NULL) != 0) {
         printf("ERROR in thread joining");
         return 3;
       }
-
-printf("THREAD JOINED SUCCESSFULLY\n");
-
   } // while !intr_rec
 
-  void *canvas_ret;
-  void *gpio_ret;
-  void *image_ret;
-  void *spotify_ret;
-  void *baseball_ret;
-  void *weather_ret;
+printf("Exited while loop\n");
 
-  if(pthread_join(clock_canvas_thr, &canvas_ret) != 0) {
+  if(pthread_join(clock_canvas_thr, NULL) != 0) {
     printf("ERROR in clock thread joining");
     return 3;
   }
 
-  if(pthread_join(gpio_canvas_thr, &gpio_ret) != 0) {
+printf("Thread joined\n");
+
+  if(pthread_join(gpio_canvas_thr, NULL) != 0) {
     printf("ERROR in spotify thread joining");
     return 3;
   }
 
 
-  // CREATE THREADS
-/*
-  if(pthread_create(&clock_canvas_thr, NULL, clockThread, (void*)Clock) != 0) {
-    printf("ERROR in clock thread creation");
-    return 2;
-  }
-*/
-/*
-  if(pthread_create(&gpio_canvas_thr, NULL, gpioThread, (void*)&canvas_ptrs) != 0) {
-    printf("ERROR in clock thread creation");
-    return 2;
-  }
-*/
-/*
-  if(pthread_create(&image_canvas_thr, NULL, imageThread, (void*)&canvas_ptrs) != 0) {
-    printf("ERROR in image thread creation");
-   return 2;
-  }
-*/
-/*
-  if(pthread_create(&spotify_canvas_thr, NULL, spotifyThread, (void*)&canvas_ptrs) != 0) {
-    printf("ERROR in spotify thread creation");
-    return 2;
-  }
-*/
-/*
-  if(pthread_create(&baseball_canvas_thr, NULL, baseballThread, (void*)&canvas_ptrs) != 0) {
-    printf("ERROR in baseball thread creation");
-    return 2;
-  }
-*/
-/*
-  if(pthread_create(&weather_canvas_thr, NULL, weatherThread, (void*)&canvas_ptrs) != 0) {
-    printf("ERROR in weather thread creation");
-    return 2;
-  }
-*/
-  // JOIN THREADS TOGETHER
-  // Join the threads to main thread -- don't execute cleanup code
-  // until interrupt is received
-/*
-  void *canvas_ret;
-  void *gpio_ret;
-  void *image_ret;
-  void *spotify_ret;
-  void *baseball_ret;
-  void *weather_ret;
-*/
-
-/*
-  if(pthread_join(clock_canvas_thr, &canvas_ret) != 0) {
-    printf("ERROR in clock thread joining");
-    return 3;
-  }
-*/
-/*
-  if(pthread_join(gpio_canvas_thr, &gpio_ret) != 0) {
-    printf("ERROR in spotify thread joining");
-    return 3;
-  }
-*/
-/*
-  if(pthread_join(image_canvas_thr, &image_ret) != 0) {
-    printf("ERROR in image thread joining");
-    return 3;
-  }
-*/
-/*
-  if(pthread_join(spotify_canvas_thr, &spotify_ret) != 0) {
-    printf("ERROR in spotify thread joining");
-    return 3;
-  }
-*/
-/*
-  if(pthread_join(baseball_canvas_thr, &baseball_ret) != 0) {
-    printf("ERROR in baseball thread joining");
-    return 3;
-  }
-*/
-/*
-  if(pthread_join(weather_canvas_thr, &weather_ret) != 0) {
-    printf("ERROR in weather thread joining");
-    return 3;
-  }
-*/
   // CLEANUP AND EXIT CLEANLY
   // Program is exited, shut down the RGB Matrix
   printf("Exiting... clearing canvas\n");
   canvas->Clear();
   delete canvas;
-
 }
-
 
 // END OF FILE ---------------------------------------------------------------
 // ---------------------------------------------------------------------------

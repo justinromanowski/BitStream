@@ -85,7 +85,6 @@ void CopyImageToCanvas(const Magick::Image &image, Canvas *canvas,
 //      }
     }
   }
-  printf("Constructed image\n");
 }
 
 
@@ -104,7 +103,6 @@ void CopyImageToCanvasTransparent(const Magick::Image &image, Canvas *canvas,
       }
     }
   }
-  printf("Constructed image\n");
 }
 
 
@@ -201,7 +199,7 @@ void fontSetup() {
 
 
 /////////////////////////////////////////////////////////////////////////////
-// CLASS RELATED ITEMS //
+// CLOCK CLASS //
 /////////////////////////////////////////////////////////////////////////////
 
 ClockClass::ClockClass(void *ptr) {
@@ -235,9 +233,31 @@ void ClockClass::updateTime() {
   t = time(NULL);
   time_ptr = localtime(&t);
 
+  // MAKE GLOBAL AT SOME POINT
+  bool twelve_hr = true;
+
+  int time_hr;
+  std::string am_pm;
+
+  if(twelve_hr) {
+    time_hr = time_ptr->tm_hour;
+    // Check AM or PM
+    if(time_hr > 12) {
+      time_hr -= 12;
+      am_pm = "PM";
+    } else if(time_hr == 0) {
+      time_hr = 12;
+      am_pm = "AM";
+    } else {
+      am_pm = "AM";
+    }
+  } else {
+    am_pm = "  ";
+  }
+
   // Update char arrays w/ new time data
-  sprintf(time_str, "%.2d:%.2d:", time_ptr->tm_hour, time_ptr->tm_min);
-  sprintf(sec_str, "%.2d AM", time_ptr->tm_sec);
+  sprintf(time_str, "%.2d:%.2d:", time_hr, time_ptr->tm_min);
+  sprintf(sec_str, "%.2d %.2s", time_ptr->tm_sec, am_pm.c_str());
   sprintf(date_str, "%.3s %.3s %.2d %d", wday_name[time_ptr->tm_wday], mon_name[time_ptr->tm_mon],
                                          time_ptr->tm_mday, 1900+(time_ptr->tm_year));
 
@@ -267,4 +287,96 @@ void ClockClass::drawDisplay() {
   canvas->SwapOnVSync(offscreen_canvas);
 
   pthread_mutex_unlock(canvas_mutex);
+}
+
+
+/////////////////////////////////////////////////////////////////////////////
+// HOMEPAGE CLASS //
+/////////////////////////////////////////////////////////////////////////////
+
+HomePageClass::HomePageClass(void* ptr) {
+  // Load in the necessary pointers and objects
+  if(ptr==NULL) {
+    printf("ERROR: NULL POINTER");
+  }
+
+  canvas_args *canvas_ptrs = (struct canvas_args*)ptr;
+  canvas = canvas_ptrs->canvas;
+  offscreen_canvas = canvas_ptrs->offscreen_canvas;
+  canvas_mutex = canvas_ptrs->canvas_mutex;
+
+  loadImages();
+}
+
+void HomePageClass::loadImages() {
+  // BITS //
+  const char* baseball_bit_fp = baseball_bit_path.c_str();
+  const char* baseball_min_fp = baseball_min_path.c_str();
+  const char* image_bit_fp = image_bit_path.c_str();
+  const char* image_min_fp = image_min_path.c_str();
+  const char* spotify_bit_fp = spotify_bit_path.c_str();
+  const char* spotify_min_fp = spotify_min_path.c_str();
+  const char* weather_bit_fp = weather_bit_path.c_str();
+  const char* weather_min_fp = weather_min_path.c_str();
+
+  baseball_bit = LoadImageAndScaleImage(baseball_bit_fp, bit_size, bit_size);
+  baseball_min = LoadImageAndScaleImage(baseball_min_fp, min_size, min_size);
+  image_bit = LoadImageAndScaleImage(image_bit_fp, bit_size, bit_size);
+  image_min = LoadImageAndScaleImage(image_min_fp, min_size, min_size);
+  spotify_bit = LoadImageAndScaleImage(spotify_bit_fp, bit_size, bit_size);
+  spotify_min = LoadImageAndScaleImage(spotify_min_fp, min_size, min_size);
+  weather_bit = LoadImageAndScaleImage(weather_bit_fp, bit_size, bit_size);
+  weather_min = LoadImageAndScaleImage(weather_min_fp, min_size, min_size);
+
+  // LOGO //
+  const char* bitstream_logo_fp = "images/bitstream_3.png";
+  bitstream_logo = LoadImageAndScaleImage(bitstream_logo_fp, 60, 20);
+
+  printf("Images initialized successfully - homepage\n");
+}
+
+void HomePageClass::drawBits() {
+  bit_x = 0;
+  // IF the current bit is selected by the encoder, then it should be
+  // enlarged for the user to see. ELSE, draw the minimized bit.
+
+  if(encX_count==IMAGE) {
+    CopyImageToCanvas(image_bit[0], offscreen_canvas, &bit_x, &bit_y);
+    bit_x += bit_size+1;
+  } else {
+    CopyImageToCanvas(image_min[0], offscreen_canvas, &bit_x, &min_y);
+    bit_x += min_size+1;
+  }
+
+  if(encX_count==SPOTIFY) {
+    CopyImageToCanvas(spotify_bit[0], offscreen_canvas, &bit_x, &bit_y);
+    bit_x += bit_size+1;
+  } else {
+    CopyImageToCanvas(spotify_min[0], offscreen_canvas, &bit_x, &min_y);
+    bit_x += min_size+1;
+  }
+
+  if(encX_count==BASEBALL) {
+    CopyImageToCanvas(baseball_bit[0], offscreen_canvas, &bit_x, &bit_y);
+    bit_x += bit_size+1;
+  } else {
+    CopyImageToCanvas(baseball_min[0], offscreen_canvas, &bit_x, &min_y);
+    bit_x += min_size+1;
+  }
+
+  if(encX_count==WEATHER) {
+    CopyImageToCanvas(weather_bit[0], offscreen_canvas, &bit_x, &bit_y);
+    bit_x += bit_size+1;
+  } else {
+    CopyImageToCanvas(weather_min[0], offscreen_canvas, &bit_x, &min_y);
+    bit_x += min_size+1;
+  }
+}
+
+void HomePageClass::drawBitStreamLogo() {
+  CopyImageToCanvas(bitstream_logo[0], offscreen_canvas, &logo_x, &logo_y);
+}
+
+void HomePageClass::clearDisplay() {
+  SetCanvasArea(offscreen_canvas, 0,0,64,44, &bg_color);
 }

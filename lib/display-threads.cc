@@ -20,7 +20,7 @@ using ImageVector = std::vector<Magick::Image>;
 
 extern volatile bool interrupt_received;
 
-const char *img_filename = "/home/justin/rpi-rgb-led-matrix/examples-api-use/pixel_house.png";
+const char *img_fp = "/home/justin/rpi-rgb-led-matrix/examples-api-use/pixel_house.png";
 const char *album_cover_filename = "/home/justin/rpi-rgb-led-matrix/examples-api-use/spotify_album.png";
 const char *spotify_icon_fn = "/home/justin/rpi-rgb-led-matrix/examples-api-use/spotify.png";
 const char *spotify_pause_fn = "/home/justin/rpi-rgb-led-matrix/examples-api-use/spotify_pause.png";
@@ -39,195 +39,7 @@ ImageVector images;
 int cmd_fd;
 int data_fd;
 
-/*
 
-// FONTS
-rgb_matrix::Font time_font;
-rgb_matrix::Font date_font;
-rgb_matrix::Font five_seven_font;
-rgb_matrix::Font six_ten_font;
-rgb_matrix::Font eight_thirteen_font;
-rgb_matrix::Font *outline_font = NULL;
-
-  // -------------------------------------------------------------------------
-  // Given the filename, load the image and scale to the size of the matrix.
-  // If this is an animated image, the resutlting vector will contain multiple.
-  // -------------------------------------------------------------------------
-
-static ImageVector LoadImageAndScaleImage(const char *filename,
-                                          int target_width,
-                                          int target_height) {
-  ImageVector result;
-
-  ImageVector frames;
-  try {
-    readImages(&frames, filename);
-  } catch (std::exception &e) {
-    if (e.what())
-      fprintf(stderr, "%s\n", e.what());
-    return result;
-  }
-
-  if (frames.empty()) {
-    fprintf(stderr, "No image found.");
-    return result;
-  }
-
-  // Animated images have partial frames that need to be put together
-  if (frames.size() > 1) {
-    Magick::coalesceImages(&result, frames.begin(), frames.end());
-  } else {
-    result.push_back(frames[0]); // just a single still image.
-  }
-
-  for (Magick::Image &image : result) {
-    image.scale(Magick::Geometry(target_width, target_height));
-  }
-
-  return result;
-}
-
-  // ---------------------------------------------------------------------------
-  // Copy an image to a Canvas. Note, the RGBMatrix is implementing the Canvas
-  // interface as well as the FrameCanvas we use in the double-buffering of the
-  // animted image.
-  // ---------------------------------------------------------------------------
-void CopyImageToCanvas(const Magick::Image &image, Canvas *canvas,
-                       const int *x_pos, const int *y_pos) {
-
-  // Copy all the pixels to the canvas.
-  for (size_t y = 0; y < image.rows(); ++y) {
-    for (size_t x = 0; x < image.columns(); ++x) {
-      const Magick::Color &c = image.pixelColor(x, y);
-      //printf("X: %d | Y: %d | ALPHAQUANTIM = %d\n", y, x, c.alphaQuantum());
-//      if (c.alphaQuantum() < 70000) { // 256
-        canvas->SetPixel(x + *x_pos, y + *y_pos,
-                         ScaleQuantumToChar(c.redQuantum()),
-                         ScaleQuantumToChar(c.greenQuantum()),
-                         ScaleQuantumToChar(c.blueQuantum()));
-//      }
-    }
-  }
-  printf("Constructed image\n");
-}
-
-void CopyImageToCanvasTransparent(const Magick::Image &image, Canvas *canvas,
-                       const int *x_pos, const int *y_pos) {
-
-  // Copy all the pixels to the canvas.
-  for (size_t y = 0; y < image.rows(); ++y) {
-    for (size_t x = 0; x < image.columns(); ++x) {
-      const Magick::Color &c = image.pixelColor(x, y);
-      if (c.redQuantum()>0 || c.greenQuantum()>0 || c.blueQuantum()>0) { // 256
-        canvas->SetPixel(x + *x_pos, y + *y_pos,
-                         ScaleQuantumToChar(c.redQuantum()),
-                         ScaleQuantumToChar(c.greenQuantum()),
-                         ScaleQuantumToChar(c.blueQuantum()));
-      }
-    }
-  }
-  printf("Constructed image\n");
-}
-
-
-  // -------------------------------------------------------------------------
-  // An animated image has to constantly swap to the next frame.
-  // We're using double-buffering and fill an offscreen buffer first, then show.
-  // -------------------------------------------------------------------------
-void ShowAnimatedImage(const Magick::Image &image, RGBMatrix *canvas,
-                       const int *x_pos, const int *y_pos,
-                       FrameCanvas *offscreen_canvas) {
-      CopyImageToCanvas(image, offscreen_canvas, x_pos, y_pos);
-      offscreen_canvas = canvas->SwapOnVSync(offscreen_canvas);
-}
-
-static bool FullSaturation(const rgb_matrix::Color &c) {
-  return (c.r == 0 || c.r == 255)
-    && (c.g == 0 || c.g == 255)
-    && (c.b == 0 || c.b == 255);
-}
-
-void SetCanvasArea(FrameCanvas *offscreen_canvas, int x, int y,
-                     int width, int height, rgb_matrix::Color *color) {
-  for (int iy = 0; iy < height; ++iy) {
-    for (int ix = 0; ix < width; ++ix) {
-      offscreen_canvas->SetPixel(x + ix, y + iy, color->r, color->g, color->b);
-    }
-  }
-}
-
-
-void fontSetup() {
-  // INITIALIZE FONTS
-  const char *time_font_ptr = NULL;
-  const char *date_font_ptr = NULL;
-  const char *five_seven_ptr = NULL;
-  const char *six_ten_ptr = NULL;
-  const char *eight_thirteen_ptr = NULL;
-
-  // Get font types
-  char time_font_filepath[] = "/home/justin/rpi-rgb-led-matrix/fonts/7x14B.bdf";
-  time_font_ptr = strdup(time_font_filepath);
-  if (time_font_ptr == NULL) {
-    fprintf(stderr, "Need to specify BDF font-file with -f\n");
-    return;
-  }
-  char date_font_filepath[] = "/home/justin/rpi-rgb-led-matrix/fonts/4x6.bdf";
-  date_font_ptr = strdup(date_font_filepath);
-  if (date_font_ptr == NULL) {
-    fprintf(stderr, "Need to specify BDF font-file with -f\n");
-    return;
-  }
-
-  char five_seven_filepath[] = "/home/justin/rpi-rgb-led-matrix/fonts/5x7.bdf";
-  five_seven_ptr = strdup(five_seven_filepath);
-  if (date_font_ptr == NULL) {
-    fprintf(stderr, "Need to specify BDF font-file with -f\n");
-    return;
-  }
-
-  char six_ten_filepath[] = "/home/justin/rpi-rgb-led-matrix/fonts/6x10.bdf";
-  six_ten_ptr = strdup(six_ten_filepath);
-  if (six_ten_ptr == NULL) {
-    fprintf(stderr, "Need to specify BDF font-file with -f\n");
-    return;
-  }
-
-  char eight_thirteen_filepath[] = "/home/justin/rpi-rgb-led-matrix/fonts/9x15B.bdf";
-  eight_thirteen_ptr = strdup(eight_thirteen_filepath);
-  if (eight_thirteen_ptr == NULL) {
-    fprintf(stderr, "Need to specify BDF font-file with -f\n");
-    return;
-  }
-
-  // Load font. This needs to be a filename with a bdf bitmap font.
-  if (!time_font.LoadFont(time_font_ptr)) {
-    fprintf(stderr, "Couldn't load font '%s'\n", time_font_ptr);
-    return;
-  }
-
-  if (!date_font.LoadFont(date_font_ptr)) {
-    fprintf(stderr, "Couldn't load font '%s'\n", date_font_ptr);
-    return;
-  }
-
-  if (!five_seven_font.LoadFont(five_seven_ptr)) {
-    fprintf(stderr, "Couldn't load font '%s'\n", five_seven_ptr);
-    return;
-  }
-
-  if (!six_ten_font.LoadFont(six_ten_ptr)) {
-    fprintf(stderr, "Couldn't load font '%s'\n", six_ten_ptr);
-    return;
-  }
-
-  if (!eight_thirteen_font.LoadFont(eight_thirteen_ptr)) {
-    fprintf(stderr, "Couldn't load font '%s'\n", eight_thirteen_ptr);
-    return;
-  }
-
-}
-*/
 
 // FUNCTION SETUP - THREADS --------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -242,6 +54,7 @@ void* clockThread(void* ptr){
     usleep(200*1000);
   }
   printf("Exited clock thread\n");
+  return NULL;
 }
 
   // -------------------------------------------------------------------------
@@ -265,37 +78,41 @@ void* imageThread(void *ptr){
   int image_display_count = 0;
   int still_image_sleep = 1000000;
 
+  ImageVector img = LoadImageAndScaleImage(img_fp,64,40);
+
   while(!interrupt_received && !changing_app) {
 
     // PUT IMAGE ONTO CANVAS
     pthread_mutex_lock(canvas_mutex);
-    printf("Image at MUTEX\n");
+    printf("Image at MUTEX, size=%d\n", img.size());
 
-    switch (images.size()) {
-    case 0:   // failed to load image.
-      pthread_mutex_unlock(canvas_mutex);
-      break;
-    case 1:   // Simple example: one image to show
-      // Shanty code with the delays, but it works
+    switch (img.size()) {
+      case 0:   // failed to load image.
+        pthread_mutex_unlock(canvas_mutex);
+        usleep(still_image_sleep*10);
+        break;
+      case 1:   // Simple example: one image to show
+        // Shanty code with the delays, but it works
 
-      CopyImageToCanvas(images[0], offscreen_canvas, &offset_x, &offset_y);
-      canvas->SwapOnVSync(offscreen_canvas);
-      pthread_mutex_unlock(canvas_mutex);
+        CopyImageToCanvas(img[0], offscreen_canvas, &offset_x, &offset_y);
+        canvas->SwapOnVSync(offscreen_canvas);
+        pthread_mutex_unlock(canvas_mutex);
 
-      usleep(still_image_sleep*3);
-      break;
-    default:  // More than one image: this is an animation.
-     //FrameCanvas *offscreen_canvas = canvas->CreateFrameCanvas();
-     for (const auto &image : images) {
-       ShowAnimatedImage(image,canvas, &offset_x, &offset_y, offscreen_canvas);
-       pthread_mutex_unlock(canvas_mutex);
-       usleep(image.animationDelay() * 10000);  // 1/100s converted to usec
-     }
-      break;
+        usleep(still_image_sleep*3);
+        break;
+      default:  // More than one image: this is an animation.
+       //FrameCanvas *offscreen_canvas = canvas->CreateFrameCanvas();
+       for (const auto &image : img) {
+         ShowAnimatedImage(image ,canvas, &offset_x, &offset_y, offscreen_canvas);
+         pthread_mutex_unlock(canvas_mutex);
+         usleep(image.animationDelay() * 10000);  // 1/100s converted to usec
+       }
+        break;
+      }
     }
+    printf("Exited image thread");
+    return NULL;
   }
-  printf("Exited image thread");
-}
 
   // -------------------------------------------------------------------------
   // Thread for displaying data from Spotify music. Uses data from the FIFO
@@ -380,27 +197,14 @@ void* spotifyThread(void *ptr){
 
     // TWO COUNTS RUNNING: one for scrolling text (200ms)
     // one for sending API requests (3s)
-
-    pthread_mutex_lock(canvas_mutex);
-
-    printf("SPOTIFY AT MUTEX\n");
-
-
-    //////////////////////////////////////////////////////////// TEST
-//    using std::chrono::high_resolution_clock;
-//    using std::chrono::duration_cast;
-//    using std::chrono::duration;
-//    using std::chrono::milliseconds;
-
-//auto t3 = high_resolution_clock::now();
-//////////////////////////////////////////////////////////////////
-
     if((int)usleep_count > cmd_refresh) {
 
       // OPEN THE FIFOS
-      cmd_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/cmd_cc_to_py",O_WRONLY|O_NONBLOCK);
+//      cmd_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/cmd_cc_to_py",O_WRONLY|O_NONBLOCK);
+      cmd_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/cmd_cc_to_py",O_WRONLY);
       printf("Cmd fifo opened on C++\n");
-      data_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/data_py_to_cc",O_RDONLY|O_NONBLOCK);
+//      data_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/data_py_to_cc",O_RDONLY|O_NONBLOCK);
+      data_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/data_py_to_cc",O_RDONLY);
       printf("Data fifo opened on C++\n");
 
       printf("C++ sending command for song data\n");
@@ -408,8 +212,9 @@ void* spotifyThread(void *ptr){
 
       printf("Reading from data fifo\n");
 
-      usleep(500*1000); // 50ms
+//      usleep(500*1000); // 50ms
       read(data_fd, data_rx, 1024);
+
       printf("Received %s", data_rx);
       // PARSE FIFO DATA
       char *token;
@@ -483,6 +288,9 @@ void* spotifyThread(void *ptr){
         printf("IMAGE UPDATED\n");
 
       }
+
+      pthread_mutex_lock(canvas_mutex);
+      printf("SPOTIFY AT MUTEX\n");
 
       // RESUME ITEMS SENSITIVE TO 3S COUNT
       // TWO timers running:
@@ -783,8 +591,8 @@ void* baseballThread(void* ptr) {
 
 
   // GAME DATA
-  std::string home_abrv = "NYY";
-  std::string away_abrv = "LAD";
+  std::string home_abrv = "E";
+  std::string away_abrv = "E";
 
   std::string home_score;// = "10";
   std::string away_score;// = "4";
@@ -815,31 +623,37 @@ void* baseballThread(void* ptr) {
 
   // FIFO DATA
   char cmd_tx[64] = "mlb";
-  char data_rx[1024];
+  char data_rx[1024] = "nogame,";
+
 
   while(!interrupt_received && !changing_app) {
-    pthread_mutex_lock(canvas_mutex);
     printf("BASEBALL AT MUTEX\n");
 
-    cmd_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/cmd_cc_to_py",O_WRONLY|O_NONBLOCK);
-    printf("Cmd fifo opened on C++\n");
-    data_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/data_py_to_cc",O_RDONLY|O_NONBLOCK);
-    printf("Data fifo opened on C++\n");
+      // OPEN THE FIFOS
+//      cmd_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/cmd_cc_to_py",O_WRONLY|O_NONBLOCK);
+      cmd_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/cmd_cc_to_py",O_WRONLY);
+      printf("Cmd fifo opened on C++\n");
+//      data_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/data_py_to_cc",O_RDONLY|O_NONBLOCK);
+      data_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/data_py_to_cc",O_RDONLY);
+      printf("Data fifo opened on C++\n");
 
-    printf("C++ sending command for baseball data\n");
-    write(cmd_fd, cmd_tx, sizeof(cmd_tx));
+      printf("C++ sending command for song data\n");
+      write(cmd_fd, cmd_tx, sizeof(cmd_tx));
 
-    printf("Reading from data fifo\n");
+      printf("Reading from data fifo\n");
+//      usleep(10*1000*1000); // 50ms
+      read(data_fd, data_rx, sizeof(data_rx));
+      printf("data_fd = %d\n", data_fd);
 
-    usleep(500*1000); // 50ms
-    read(data_fd, data_rx, 1024);
-    printf("Received %s", data_rx);
+
+      printf("Received %s", data_rx);
+
+    pthread_mutex_lock(canvas_mutex);
 
     // Get the game state - first item in the string
     char *token;
     // Split string into array of strings
     token = strtok(data_rx,",");
-
     if(token != NULL){
       std::string data(token);
       game_state = data;
@@ -848,7 +662,6 @@ void* baseballThread(void* ptr) {
       // Set the game state to no game
       game_state = "nogame";
     }
-
     // PARSING THE DATA INTO C++ PROCESS
     // All game states (besides nogame) have team-specific data in the first six items
     // of the data, so we can process that outside of the "if" statements before processing
@@ -884,7 +697,7 @@ void* baseballThread(void* ptr) {
               away_second.b = color & 0xFF;
               break;
             case 3:
-              if(home_abrv == data){
+              if(!new_teams && home_abrv == data){
                 new_teams = false;
               } else {
                 new_teams = true;
@@ -930,6 +743,8 @@ void* baseballThread(void* ptr) {
       printf("new teams updated\n");
 
     }
+
+    SetCanvasArea(offscreen_canvas,0,0,64,44,&blank);
 
     // TWO PARTS HERE: parse the rest of the data AND update the display
     // depending on the state of the game, or if there is a game
@@ -979,10 +794,10 @@ void* baseballThread(void* ptr) {
       CopyImageToCanvasTransparent(home_logo[0], offscreen_canvas, &home_x, &home_y);
       CopyImageToCanvasTransparent(away_logo[0], offscreen_canvas, &away_x, &away_y);
 
-      rgb_matrix::DrawText(offscreen_canvas, seven_fourteen_font, home_x+5, home_y+18 + seven_fourteen_font.baseline(),
+      rgb_matrix::DrawText(offscreen_canvas, seven_fourteen_font, home_x+5, home_y+17 + seven_fourteen_font.baseline(),
                            home_second, NULL, home_score.c_str(), letter_spacing);
 
-      rgb_matrix::DrawText(offscreen_canvas, seven_fourteen_font, away_x+5, away_y+18 + seven_fourteen_font.baseline(),
+      rgb_matrix::DrawText(offscreen_canvas, seven_fourteen_font, away_x+5, away_y+17 + seven_fourteen_font.baseline(),
                            away_second, NULL, away_score.c_str(), letter_spacing);
 
 
@@ -1075,7 +890,7 @@ void* baseballThread(void* ptr) {
         SetCanvasArea(offscreen_canvas, inning_x, bot_inning_y, 5, 3, &blank);
       }
 
-      rgb_matrix::DrawText(offscreen_canvas, six_ten_font, inning_x, top_inning_y+6 + six_ten_font.baseline(),
+      rgb_matrix::DrawText(offscreen_canvas, six_ten_font, inning_x, top_inning_y+3 + six_ten_font.baseline(),
                            scoreboard_color, NULL, inning.c_str(), letter_spacing);
 
       // BALL
@@ -1129,7 +944,6 @@ void* baseballThread(void* ptr) {
 
     } else if(game_state == "post") {
       // data in postgame: away runs, home runs
-
       // PARSING
       for(int i=0; i<2; i++) {
         if(token!=NULL) {
@@ -1170,14 +984,14 @@ void* baseballThread(void* ptr) {
 
     } else if(game_state == "nogame") {
       home_logo_fn = baseball_path + "NYY.png";
-      home_logo = LoadImageAndScaleImage(home_logo_fn.c_str(),
+      ImageVector nogame_logo = LoadImageAndScaleImage(home_logo_fn.c_str(),
                                          24,24);
 
       std::string nogame_text_1 = "NO";
       std::string nogame_text_2 = "GAME";
       std::string nogame_text_3 = "TODAY";
 
-      CopyImageToCanvas(home_logo[0], offscreen_canvas, &nogame_logo_x, &nogame_logo_y);
+      CopyImageToCanvas(nogame_logo[0], offscreen_canvas, &nogame_logo_x, &nogame_logo_y);
 
       rgb_matrix::DrawText(offscreen_canvas, six_ten_font, nogame_text_x, nogame_text_y + six_ten_font.baseline(),
                            scoreboard_color, NULL, nogame_text_1.c_str(), letter_spacing);
@@ -1192,9 +1006,32 @@ void* baseballThread(void* ptr) {
     pthread_mutex_unlock(canvas_mutex);
     usleep(10*1000*1000); // sleep 10s
   }
+  close(data_fd);
+  close(cmd_fd);
+
   printf("Exited baseball thread\n");
   return NULL;
 }
+
+
+std::string timeConverter(int x) {
+  if(x > 12) {
+    x -= 12;
+    std::string time_ret = std::to_string(x);
+    time_ret = time_ret + "p";
+    return time_ret;
+  } else if(x == 0) {
+    x = 12;
+    std::string time_ret = std::to_string(x);
+    time_ret = time_ret + "a";
+    return time_ret;
+  } else {
+    std::string time_ret = std::to_string(x);
+    time_ret = time_ret + "a";
+    return time_ret;
+  }
+}
+
 
 void* weatherThread(void *ptr){
   // THREAD INITIALIZATIONS
@@ -1209,26 +1046,29 @@ void* weatherThread(void *ptr){
 
   // COLORS ////////////////////////////////////////
   rgb_matrix::Color weather_text_color(10, 10, 10);
-  rgb_matrix::Color color_test(150, 150, 150);
+  rgb_matrix::Color text_color(150, 150, 150);
+
   // FILEPATHS /////////////////////////////////////
   std::string weather_img_path = "images/weather/";
-  std::string raindrop_path = weather_img_path + "raindrop.png";
-printf("%s\n", raindrop_path.c_str());
+  std::string raindrop_path = weather_img_path + "raindrop_dark.png";
+  std::string raindrop_light_path = weather_img_path + "raindrop_light.png";
 
   const char *raindrop_img_fn = raindrop_path.c_str();
+  const char *raindrop_light_fn = raindrop_light_path.c_str();
   // WEATHER DATA VARIABLES ///////////////////////
 
   ImageVector bg_img;
   ImageVector curr_img;
   ImageVector one_hr_img;
   ImageVector raindrop_img;
+  ImageVector raindrop_light;
 
-printf("ABOUT TO LOAD IMAGES\n");
 
   raindrop_img = LoadImageAndScaleImage(raindrop_img_fn,
-                                        5, 8);
+                                        3, 6);
 
-printf("rAINDROP LOADED IN\n");
+  raindrop_light = LoadImageAndScaleImage(raindrop_light_fn,
+                                          3, 6);
 
   std::string status;
   std::string city_name = "Naples";
@@ -1262,16 +1102,20 @@ printf("rAINDROP LOADED IN\n");
   int curr_img_size = 20;
   int curr_img_x = 0;
   int curr_img_y = 0;
-  int small_img_size = 14;
-  int one_hr_img_x = 3;
-  int one_hr_img_y = 25;
+  int weather_img_size = 14;
+  int one_hr_img_x = 0;
+  int one_hr_img_y = 31;
 
- // int precip_x = 64 - (5 * curr_precip.size());
-  int precip_y = curr_img_y + 14;
-//  int raindrop_x = precip_x - 6;
+  int one_hr_time_x = 64;
+  int one_hr_precip_x = 0;
 
   int curr_text_x = 5;
   int curr_temp_y = 0;
+  // OLD CODE - CHAHNGED BELOW
+  int precip_y = curr_img_y + 14;
+  int raindrop_x = curr_text_x;
+  int precip_x = raindrop_x + 4;
+
   int city_y = precip_y + 8;
 
 
@@ -1281,9 +1125,9 @@ printf("rAINDROP LOADED IN\n");
 
 
   // FIFO READING ////////////////////////////////////
-  cmd_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/cmd_cc_to_py",O_WRONLY|O_NONBLOCK);
+  cmd_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/cmd_cc_to_py",O_WRONLY);
   printf("Cmd fifo opened on C++\n");
-  data_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/data_py_to_cc",O_RDONLY|O_NONBLOCK);
+  data_fd = open("/home/justin/rpi-rgb-led-matrix/examples-api-use/data_py_to_cc",O_RDONLY);
   printf("Data fifo opened on C++\n");
 
   printf("C++ sending command for weather data\n");
@@ -1335,7 +1179,7 @@ printf("rAINDROP LOADED IN\n");
             one_hr_precip = data;
             break;
           case 7:
-            one_hr_time = data;
+            one_hr_time = timeConverter(stoi(data));
             break;
           case 8:
             two_hr_temp = data;
@@ -1397,16 +1241,19 @@ printf("rAINDROP LOADED IN\n");
     std::string one_hr_img_path = weather_img_path + "weather-" + one_hr_img_number + ".png";
     const char *one_hr_img_fn = one_hr_img_path.c_str();
     one_hr_img = LoadImageAndScaleImage(one_hr_img_fn,
-                                        small_img_size,
-                                        small_img_size);
+                                        weather_img_size,
+                                        weather_img_size);
 
+//    raindrop_x = curr_text_x + (curr_temp.size() * 7) - 9;
+//    precip_x = raindrop_x + 4;
+//    precip_y = curr_img_y + 6;
 
     pthread_mutex_lock(canvas_mutex);
 
     // DISPLAYING WEATHER IMAGES
       CopyImageToCanvas(bg_img[0], offscreen_canvas, &bg_img_x, &bg_img_y);
 //    CopyImageToCanvas(curr_img[0], offscreen_canvas, &curr_img_x, &curr_img_y);
-//    CopyImageToCanvas(raindrop_img[0], offscreen_canvas, &raindrop_x, &precip_y);
+    CopyImageToCanvasTransparent(raindrop_img[0], offscreen_canvas, &raindrop_x, &precip_y);
 //    CopyImageToCanvas(one_hr_img[0], offscreen_canvas, &one_hr_img_x, &one_hr_img_y);
 
 
@@ -1416,16 +1263,33 @@ printf("rAINDROP LOADED IN\n");
     rgb_matrix::DrawText(offscreen_canvas, five_seven_font, curr_text_x, city_y + five_seven_font.baseline(),
                          weather_text_color, NULL, city_name.c_str(), letter_spacing);
 
-    rgb_matrix::DrawText(offscreen_canvas, five_seven_font, curr_text_x, precip_y + five_seven_font.baseline(),
+    rgb_matrix::DrawText(offscreen_canvas, five_seven_font, precip_x, precip_y + five_seven_font.baseline(),
                          weather_text_color, NULL, curr_precip.c_str(), letter_spacing);
 
-    rgb_matrix::ScrollText(offscreen_canvas, five_seven_font, 0, 31 + five_seven_font.baseline(), 10, 40, 33, 42,
-                           color_test, NULL, city_name.c_str(), letter_spacing);
+    // ONE HR TIME
+    CopyImageToCanvas(one_hr_img[0], offscreen_canvas, &one_hr_img_x, &one_hr_img_y);
+    rgb_matrix::DrawText(offscreen_canvas, six_ten_font, one_hr_img_x + 15, one_hr_img_y + six_ten_font.baseline(),
+                         text_color, NULL, one_hr_temp.c_str(), letter_spacing);
+    one_hr_time_x = 64 - (5*one_hr_time.size());
+    rgb_matrix::DrawText(offscreen_canvas, five_seven_font, one_hr_time_x, one_hr_img_y + five_seven_font.baseline(),
+                         text_color, NULL, one_hr_time.c_str(), letter_spacing);
+
+    int one_hr_precip_y = one_hr_img_y + 6;
+    one_hr_precip_x = one_hr_img_x + 9 + (6*one_hr_temp.size());
+    CopyImageToCanvas(raindrop_light[0], offscreen_canvas, &one_hr_precip_x, &one_hr_precip_y);
+    rgb_matrix::DrawText(offscreen_canvas, four_six_font, one_hr_precip_x+4, one_hr_precip_y+1 + four_six_font.baseline(),
+                         text_color, NULL, one_hr_precip.c_str(), letter_spacing);
+
+    offscreen_canvas->SetPixel(0,44,250,250,250);
 
     canvas->SwapOnVSync(offscreen_canvas);
     pthread_mutex_unlock(canvas_mutex);
     usleep(10*1000*1000);
   }
+
+  close(data_fd);
+  close(cmd_fd);
+
   printf("Exited weather thread\n");
   return NULL;
 }

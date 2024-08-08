@@ -393,7 +393,7 @@ class WeatherRequests:
 			self.FORECAST_URL = self.FORECAST_BASE + self.LOCATION_KEY
 
 		else:
-			printf("ERROR: Error obtaining location")
+			print("ERROR: Error obtaining location")
 
 
 	def __init__(self):
@@ -438,6 +438,7 @@ while True:
 		data_tx = spotify_data.requestData()
 
 		if(data_tx != "error"):
+			print(data_tx)
 			data_fd.write(data_tx)
 			data_fd.flush()
 			print("Sent currently playing data")
@@ -447,6 +448,7 @@ while True:
 
 		data_tx = mlb_data.requestData()
 
+		print(data_tx)
 		data_fd.write(data_tx)
 		data_fd.flush()
 		print("Sent mlb data")
